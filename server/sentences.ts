@@ -62,19 +62,40 @@ export const isRepeatedLine = (line: string, repeated: Set<string>) =>
 export const isPageFooter = (line: string, repeated: Set<string>) =>
   pageMarker.test(line) && isRepeatedLine(line, repeated);
 
-// Embedded prompt injection: an imperative aimed at an AI, a summary or its instructions.
+// Recognize direct commands, not descriptions of work such as "will write instructions".
+// This is a conservative heuristic; the model still treats every PDF as untrusted data.
 const word = (pattern: string) =>
   new RegExp(`(?<![\\p{L}\\p{N}])(?:${pattern})(?![\\p{L}\\p{N}])`, 'iu');
-const imperative = word(
-  "zignoruj|ignoruj|pomiń|zapomnij|nie\\s+wspominaj|nie\\s+ujawniaj|napisz|wpisz|podaj|odpowiedz|stwierdź|ignore|disregard|forget|do\\s+not\\s+(?:mention|reveal)|don['’]t\\s+(?:mention|reveal)|write|say|respond|reply|output",
+const commandWords =
+  "zignoruj|ignoruj|pomiń|zapomnij|nie\\s+wspominaj|nie\\s+ujawniaj|napisz|wpisz|podaj|odpowiedz|stwierdź|ignore|disregard|forget|do\\s+not\\s+(?:mention|reveal)|don['’]t\\s+(?:mention|reveal)|write|say|respond|reply|output";
+const imperative = word(commandWords);
+const commandStart = new RegExp(
+  `^(?:please\\s+|proszę[,\\s]+)?(?:${commandWords})(?![\\p{L}\\p{N}])`,
+  'iu',
 );
-const addressee = word(
-  'polece\\p{L}*|instrukcj\\p{L}*|podsumowani\\p{L}*|streszczeni\\p{L}*|prompt\\p{L}*|system\\p{L}*\\s+ai|ai|llm|chatbot\\p{L}*|asystent\\p{L}*|instructions?|summary|assistant|language\\s+model',
+const aiAddress =
+  /^(?:(?:instrukcj\p{L}*\s+dla|instructions?\s+(?:for|to))\s+)?(?:system(?:u)?\s+ai|ai(?:\s+(?:system|assistant))?|llm|chatbot|asysten\p{L}*|assistant|language\s+model)\s*[:,]\s*/iu;
+const outputLocation = word(
+  'w\\s+(?:podsumowaniu|streszczeniu|odpowiedzi)|in\\s+(?:(?:the|your)\\s+)?(?:summary|response|answer)',
 );
+const outputPrefix = new RegExp(`^${outputLocation.source}[:,]?\\s+`, 'iu');
+const instructionAction = word(
+  "zignoruj|ignoruj|pomiń|zapomnij|nie\\s+wspominaj|nie\\s+ujawniaj|ignore|disregard|forget|do\\s+not\\s+(?:mention|reveal)|don['’]t\\s+(?:mention|reveal)",
+);
+const instructionTarget = word('polece\\p{L}*|instrukcj\\p{L}*|prompts?|instructions?');
 
-/** True for a sentence that instructs an AI system instead of describing the document. */
-export const isDirective = (sentence: string) =>
-  imperative.test(sentence) && addressee.test(sentence);
+/** Detect explicit AI addresses, output manipulation and instruction override/concealment. */
+export function isDirective(sentence: string): boolean {
+  const text = sentence.trim().replace(/^["'„“«([]+\s*/u, '');
+  const addressed = aiAddress.test(text);
+  const command = text.replace(aiAddress, '').replace(outputPrefix, '');
+  if (!commandStart.test(command)) return false;
+  return (
+    addressed ||
+    outputLocation.test(text) ||
+    (instructionAction.test(command) && instructionTarget.test(command))
+  );
+}
 
 /** Spans of embedded AI instructions in raw page text. */
 export function directiveSpans(text: string): Span[] {
