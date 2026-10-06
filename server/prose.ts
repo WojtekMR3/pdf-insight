@@ -10,7 +10,6 @@ export type ProsePassage = { id: string; page: number; quote: string };
 // line wrapping and equivalent Unicode composition may change for display.
 export const normalizeProse = (text: string) => text.normalize('NFC').replace(/\s+/gu, ' ').trim();
 
-const MAX_READABLE_CHARS = 500;
 // A clause number at the start of a line begins a new sentence: "1. Umowa", "§ 3. Okres".
 const clauseStart =
   /^\s*(?:§\s*\d+[a-z]?(?:\s*[–-]\s*\d+)?\.|\d{1,3}(?:\.\d{1,3})*[.)])\s+(?=[\p{Lu}„"(])/u;
@@ -34,12 +33,11 @@ function sentenceUnits(text: string, repeated: Set<string>): string[] {
 function readableSentences(page: Page, repeated: Set<string>): string[] {
   // A paragraph separator always ends a sentence, so one pass keeps the units apart.
   const text = sentenceUnits(page.text, repeated).map(normalizeProse).join('\u2029');
+  // Keep complete clauses up to the catalog's existing 1,200-character limit.
+  // Readability must not hide an amendment when shorter sentences exist.
   return sentenceSpans(text)
     .map(({ start, end }) => text.slice(start, end).trim())
-    .filter(
-      (quote) =>
-        quote.length <= MAX_READABLE_CHARS && /^[\p{Lu}\p{Lo}„"«(]/u.test(quote) && !isTable(quote),
-    );
+    .filter((quote) => /^[\p{Lu}\p{Lo}„"«(]/u.test(quote) && !isTable(quote));
 }
 
 const segmenter = new Intl.Segmenter(['pl', 'en'], { granularity: 'sentence' });
