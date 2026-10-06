@@ -15,7 +15,7 @@ const valid = {
   summary:
     'Strony zawarły umowę. Dotyczy wdrożenia systemu CRM. Wdrożenie kosztuje 184 500 PLN netto.',
   keyPoints: ['Wdrożenie CRM.', 'Okres 24 miesięcy.', 'Obsługa 135 użytkowników.'],
-  entities: { organizations: ['Nordwave Logistics sp. z o.o.'], people: [] },
+  entities: { organizations: ['Example Studio sp. z o.o.'], people: [] },
   amounts: [{ value: 184500, currency: 'PLN', context: 'Wdrożenie, netto' }],
   dates: [{ date: '2026-10-12', context: 'Go-live' }],
   keywords: ['CRM', 'SLA'],
