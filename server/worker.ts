@@ -46,6 +46,7 @@ export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const headers = new Headers({
       'Cache-Control': 'no-store',
+      Vary: 'Origin',
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'no-referrer',
     });
@@ -64,7 +65,6 @@ export default {
       if (!origin || !allowed.includes(origin))
         return json(403, { message: 'Niedozwolone źródło żądania.' });
       headers.set('Access-Control-Allow-Origin', origin);
-      headers.set('Vary', 'Origin');
       if (request.method === 'OPTIONS') {
         headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         headers.set('Access-Control-Allow-Headers', 'Content-Type');
