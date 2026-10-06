@@ -104,15 +104,21 @@ async function scanDeployed() {
       signal: AbortSignal.timeout(30000),
       redirect: 'error',
     });
-    if (!response.ok) throw new Error(`Public asset returned HTTP ${response.status}.`);
+    if (!response.ok) {
+      process.stderr.write(
+        `Public asset ${fingerprint(address)} returned HTTP ${response.status}.\n`,
+      );
+      throw new Error('Public asset fetch failed.');
+    }
     const text = await response.text();
     scan(`public:${new URL(address).pathname}`, text);
     visited.add(address);
-    // Follow only Vite assets on this GitHub Pages site; never document links or third-party URLs.
+    // Follow generated Vite assets only. Dependencies can mention optional unbundled modules
+    // such as qcms_bg.js; those string literals are not published frontend assets.
     const references =
-      /["'`](\/?pdf-insight\/assets\/[^"'`\s<>]+|(?:\.\/)?assets\/[^"'`\s<>]+|\.\/[A-Za-z0-9_-]+\.(?:m?js|css))["'`]/g;
+      /["'`](\/?pdf-insight\/assets\/[^"'`\s<>]+|(?:\.\/)?assets\/[^"'`\s<>]+|\.\/[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8}\.(?:m?js|css))["'`]/g;
     for (const match of text.matchAll(references)) {
-      const next = new URL(match[1], address);
+      const next = new URL(match[1], /^(?:\.\/)?assets\//.test(match[1]) ? site : address);
       if (next.origin !== new URL(site).origin || !next.pathname.startsWith('/pdf-insight/assets/'))
         continue;
       if (!/\.(?:m?js|css|json|svg|map)$/.test(next.pathname)) continue;
