@@ -11,6 +11,7 @@ const headers = { Origin: frontend.origin };
 const request = (path, options = {}) =>
   fetch(new URL(path, api), {
     ...options,
+    cache: 'no-store',
     headers: { ...headers, ...options.headers },
     signal: AbortSignal.timeout(180000),
   });
@@ -33,7 +34,19 @@ assert.equal(preflight.headers.get('Access-Control-Allow-Origin'), frontend.orig
 assert.match(preflight.headers.get('Access-Control-Allow-Methods') || '', /POST/);
 assert.match(preflight.headers.get('Access-Control-Allow-Headers') || '', /content-type/i);
 const denied = await request('/api/health', { headers: { Origin: 'https://unrelated.example' } });
-assert.equal(denied.status, 403, 'An unrelated browser origin was accepted.');
+assert.equal(
+  denied.status,
+  403,
+  `An unrelated browser origin was accepted: ${JSON.stringify({
+    status: denied.status,
+    allowOrigin: denied.headers.get('Access-Control-Allow-Origin'),
+    cacheControl: denied.headers.get('Cache-Control'),
+    cacheStatus: denied.headers.get('CF-Cache-Status'),
+    vary: denied.headers.get('Vary'),
+    body: (await denied.text()).slice(0, 500),
+  })}`,
+);
+assert.equal(denied.headers.get('Access-Control-Allow-Origin'), null);
 process.stdout.write('Backend configuration and CORS checks passed.\n');
 
 if (process.argv.includes('--sample')) {
