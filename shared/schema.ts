@@ -24,6 +24,16 @@ export const resultSchema = z.object({
   }),
   summary: text,
   keyPoints: z.array(text).min(3).max(7),
+  summarySentences: z
+    .array(
+      z.object({
+        text: text.max(1600),
+        sources: z.array(proseSourceSchema).min(1).max(5),
+      }),
+    )
+    .min(3)
+    .max(5)
+    .optional(),
   proseSources: z
     .object({
       summary: z.array(proseSourceSchema).min(3).max(5),
@@ -90,7 +100,7 @@ export const analysisMetaSchema = z.object({
   warnings: z.array(z.string()),
   source: z.enum(['local-ai', 'cloud-ai']),
   chunkCount: z.number().int().positive().optional(),
-  proseMode: z.literal('extractive').optional(),
+  proseMode: z.enum(['extractive', 'generated']).optional(),
 });
 
 export type AnalysisResult = z.infer<typeof resultSchema>;
