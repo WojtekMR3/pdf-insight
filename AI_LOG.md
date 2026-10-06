@@ -1,0 +1,34 @@
+# AI development log
+
+## Tools used
+
+Codex assisted with reading the brief, planning, implementation, dependency setup, testing and browser checks. The application uses the existing Ollama installation and `qwen3.5:9b` for local analysis and scanned-page transcription. An optional Gemini transport and Cloudflare worker adapter are prepared; their provider calls are tested with mocks, not real cloud credentials. Runtime prompts are in `server/analysis.ts`.
+
+## Five key prompts and decisions
+
+1. **Read the task PDFs and plan the implementation.** Separate the six-page brief from the 12-page test fixture. Account for the hidden injection, multiple currencies, invoice attachments and scanned amendment.
+2. **Set up a working local app without requiring a paid AI key.** Use the installed Ollama vision model, a loopback Node backend and browser PDF.js extraction. The same model transcribes scans and generates the analysis.
+3. **Add dark mode, a background and a narrower Bootstrap layout.** Use a centered container/grid, accessible controls, persisted light/dark themes and a bundled SVG background. Keep the interface usable at 360 pixels.
+4. **Extract facts from untrusted document data into the required schema.** Produce three to five summary sentences, apply amendments, distinguish currencies and net/gross amounts, and retry invalid replies only once. To reduce numeric errors, build source evidence in code and ask the model to select IDs instead of retyping values and date descriptions.
+5. **Finish the local brief requirements, leaving GitHub for later.** Add long-document chunking, provider portability, backend protections, cold/warm measurements, error and keyboard checks, unit tests and submission documentation. Keep live deployment explicitly unverified until an account and API key are configured.
+
+## Mistakes and corrections
+
+- The initial plan assumed an external API key. Inspecting the local environment found Ollama and a suitable installed vision model, so local testing needs no key.
+- PDF.js 6 rejected an obsolete `isEvalSupported` option during strict type checking. Removing it fixed the mismatch. Coordinate-aware text reconstruction fixed extra spaces around separately encoded Polish characters and has a regression test.
+- Early model replies used the old user count after reading the scanned amendment, invented an end year, treated customer counts as money, or mixed currencies. Source quotation, date and currency checks now reject these cases; explicit user/seat/license amendments receive a separate consistency check.
+- A later reply copied both amendment dates but labelled the old fee's last day as the change date. The evidence-ID approach now supplies date contexts directly from the source. It also preserves the amended monetary values even if the model's selected list omits them.
+- Parsing invoice columns initially merged adjacent numeric cells. Number-format regression tests cover both Polish and English formatting and values whose currency appears in the nearby payable total.
+- The initial sample took 38.3 seconds. Reducing generated repetition, selecting source IDs, and lazy-loading PDF.js improved measured local performance to about 16 seconds warm and 22 seconds including a cold model load. These results do not establish a hosted latency guarantee.
+- A synthetic long English agreement exposed an unjustified assumption of recurring billing. Removing that assumption from the prompt corrected it, and explicitly mapping English document types fixed classification. A later key point still inferred that the original fee began on the signing date. The current extractive pipeline now selects source-sentence IDs and copies those sentences without model paraphrasing. This prevents invented summary wording, but quotation selection can still omit context or combine original and amended terms. OCR and generated metadata remain fallible.
+- A follow-up review found that source matching removed punctuation, incorrectly accepting `USD 125` as evidence for source text `USD 1.25`. Matching now preserves numeric punctuation and signs; regression tests also cover Unicode minus signs so refunds are not converted into positive charges.
+- Buffered stream events could arrive after cancellation or after a completed result, changing the interface or saving an unwanted result. The client now stops at the first result, cancels its reader, and checks cancellation before every event. Sample loading and PDF extraction share the same cancellation lifecycle. Additional tests reproduce these races and malformed-response errors.
+- Clearing history could throw when browser storage was blocked. Storage operations now return a failure status, and the UI shows the error in the history view instead of silently clearing the visible list. Production verification also caught mid-word invoice excerpt truncation and a percentage inheriting the invoice currency; both have regression coverage.
+- A live run selected amendment sentences for the summary but omitted them from key points. The backend now retains available sentences containing detected count changes or amendment amounts in both selections, while respecting the summary/key-point limits. This uses source quotations, not generated replacement text. The follow-up check passes 55 tests plus type, lint, formatting and both build checks.
+- White text on the initial blue button had only 3.61:1 contrast. Darkening the button raised it to 5.11:1. File URL permission initially blocked automated file selection; after the user enabled it, real PDF uploads and invalid-file errors were tested.
+
+## Human review
+
+The follow-up hosting request selected GitHub Pages, Cloudflare Workers and Gemini. A deployment workflow now runs checks before publishing, passes the backend URL into the frontend build, keeps credentials in secrets and provides an optional real contract/OCR check. Account setup and hosted results are not yet verified.
+
+The candidate should be able to trace a PDF from upload through text extraction, OCR, chunking, evidence selection, validation, streaming and export. They should explain cancellation, local history, secret handling and the differences between the Node and worker entry points. Automated checks cannot establish that someone understands every line of code or that every AI-written claim is correct.

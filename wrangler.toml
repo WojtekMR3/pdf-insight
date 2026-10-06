@@ -1,0 +1,16 @@
+name = "pdf-insight-api"
+main = "server/worker.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Configure the exact frontend origin and a supported Gemini vision model before deployment.
+# Store GEMINI_API_KEY with `wrangler secret put`, never in this file.
+[vars]
+ALLOWED_ORIGINS = ""
+GEMINI_MODEL = ""
+AI_TIMEOUT_MS = "60000"
+
+[[ratelimits]]
+name = "ANALYSIS_LIMIT"
+namespace_id = "1001"
+simple = { limit = 6, period = 60 }
