@@ -10,7 +10,7 @@ PDF Insight turns a PDF into a short summary and validated JSON. It supports tex
 
 Double-click **Start PDF Insight.cmd**. It starts the local backend in the background and opens the browser. It does not install a Windows startup service.
 
-1. Choose a PDF or use **Przykładowa umowa CRM** for the supplied 12-page contract.
+1. Choose a PDF or use **Przykładowa faktura** for a synthetic one-page invoice. The supplied interview contract and its extracted fixtures remain local and are excluded from the public repository and demo.
 2. Click **Analizuj dokument**. Review the summary, source quotations, structured data and JSON.
 3. Click **Pobierz JSON** to export. Disable **Zachowaj wynik w lokalnej historii** if the result should not be saved in this browser.
 
@@ -87,7 +87,7 @@ On this PC with an RTX 5080 and `qwen3.5:9b`, the supplied contract completed in
 
 ## Public deployment and remaining submission work
 
-The selected deployment is GitHub Pages plus a Cloudflare Worker and Gemini API. `.github/workflows/deploy.yml` checks the project, deploys the backend, verifies its configuration and CORS, and publishes the frontend with the deployed backend URL. Deployment remains disabled until the repository variables and secrets described in [hosting setup](docs/hosting.md) are configured. A manual run can also analyze the supplied contract and fail if amended facts, scanned-page OCR or the latency target are missing.
+The selected deployment is GitHub Pages plus a Cloudflare Worker and Gemini API. `.github/workflows/deploy.yml` checks the project, deploys the backend, verifies its configuration and CORS, and publishes the frontend with the deployed backend URL. Deployment remains disabled until the repository variables and secrets described in [hosting setup](docs/hosting.md) are configured. A manual run can also analyze the synthetic invoice and verify its amount, dates, schema and latency. The original contract benchmark requires the private local PDF and fixtures, which are not included in the public repository.
 
 The public repository, Conventional Commits, account setup and actual deployment remain outstanding. The public end-to-end under-30-second target, external-device access and 14-day availability remain unverified. The brief's 24-hour deadline depends on when the candidate received it; this setup does not establish submission compliance.
 

@@ -14,7 +14,7 @@
     "format": "prettier --write src server shared tests scripts .github *.json *.ts *.md docs/*.md",
     "format:check": "prettier --check src server shared tests scripts .github *.json *.ts *.md docs/*.md",
     "verify:cloud": "node --import tsx scripts/verify-cloud.mjs",
-    "benchmark": "node --import tsx scripts/benchmark-local.mjs",
+    "benchmark": "node --import tsx scripts/benchmark-long.mjs",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build && npm run build:worker"
   },
   "dependencies": {

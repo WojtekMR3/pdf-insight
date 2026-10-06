@@ -11,3 +11,9 @@ tmp/
 .dev.vars
 .dev.vars.*
 .wrangler/
+Brief_Vibe_Coder_PDF_Insight.pdf
+Test_PDF_Insight_umowa_14-2026.pdf
+tests/fixtures/sample-text.txt
+tests/fixtures/sample-annex.jpg
+tests/fixtures/sample-fixture.json
+scripts/benchmark-local.mjs

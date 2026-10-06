@@ -29,6 +29,6 @@ Codex assisted with reading the brief, planning, implementation, dependency setu
 
 ## Human review
 
-The follow-up hosting request selected GitHub Pages, Cloudflare Workers and Gemini. A deployment workflow now runs checks before publishing, passes the backend URL into the frontend build, keeps credentials in secrets and provides an optional real contract/OCR check. Account setup and hosted results are not yet verified.
+The follow-up hosting request selected GitHub Pages, Cloudflare Workers and Gemini. A deployment workflow now runs checks before publishing, passes the backend URL into the frontend build, keeps credentials in secrets and provides an optional real inference check using a synthetic invoice. The user chose to keep the supplied interview PDF private, so the public sample button now loads the synthetic invoice and the original contract fixtures are ignored by Git. Account setup and hosted results are not yet verified.
 
 The candidate should be able to trace a PDF from upload through text extraction, OCR, chunking, evidence selection, validation, streaming and export. They should explain cancellation, local history, secret handling and the differences between the Node and worker entry points. Automated checks cannot establish that someone understands every line of code or that every AI-written claim is correct.
