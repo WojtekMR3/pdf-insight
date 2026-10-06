@@ -205,7 +205,14 @@ export function extractionSchema(catalog: EvidenceCatalog, passages: ProsePassag
     ]),
   );
   return resultSchema
-    .omit({ summary: true, keyPoints: true, proseSources: true, amounts: true, dates: true })
+    .omit({
+      summary: true,
+      summarySentences: true,
+      keyPoints: true,
+      proseSources: true,
+      amounts: true,
+      dates: true,
+    })
     .extend({
       document: resultSchema.shape.document.extend({
         date: dates.length ? z.enum(dates as [string, ...string[]]).nullable() : z.null(),

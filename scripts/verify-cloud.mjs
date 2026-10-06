@@ -85,6 +85,9 @@ if (process.argv.includes('--sample')) {
   assert.equal(completed?.type, 'result', 'Analysis stream ended without a result.');
   const { result, meta } = completed;
   assert.equal(meta.source, 'cloud-ai');
+  assert.equal(meta.proseMode, 'generated');
+  assert.ok(result.summarySentences?.length >= 3 && result.summarySentences.length <= 5);
+  assert.equal(result.summary, result.summarySentences.map(({ text }) => text).join(' '));
   assert.equal(result.document.type, 'faktura');
   assert.equal(result.document.language, 'en');
   assert.equal(result.document.date, '2026-10-01');

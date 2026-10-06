@@ -13,6 +13,14 @@ import { buildEvidence, extractionSchema, resolveEvidence, isAmendmentPage } fro
 import { buildProseCatalog, resolveProse } from './prose.ts';
 import { repeatedLines } from './sentences.ts';
 import {
+  SUMMARY_PROMPT,
+  SUMMARY_REVIEW_PROMPT,
+  summaryReviewSchema,
+  summarySources,
+  summaryDraftSchema,
+  resolveSummary,
+} from './summary.ts';
+import {
   resultSchema,
   MAX_TEXT_CHARS,
   type AnalysisRequest,
@@ -41,7 +49,7 @@ export async function validatedReply<T>(
   provider: AiProvider,
   messages: ChatMessage[],
   schema: unknown,
-  validate: (value: unknown) => T,
+  validate: (value: unknown) => T | Promise<T>,
   signal: AbortSignal,
   maxTokens: number,
   onRetry: () => void = () => {},
@@ -57,7 +65,7 @@ export async function validatedReply<T>(
         signal,
         attempt ? Math.min(maxTokens + 1200, 6000) : maxTokens,
       );
-      return validate(JSON.parse(raw));
+      return await validate(JSON.parse(raw));
     } catch (error) {
       if (signal.aborted || error instanceof AppError) throw error;
       // Only an invalid reply earns a correction; a code error would just repeat a paid request.
@@ -142,7 +150,8 @@ async function condense(
   );
 }
 
-export async function analyzeDocument(
+/** Extract source evidence before composing the reader-facing summary. */
+export async function extractDocument(
   request: AnalysisRequest,
   signal: AbortSignal,
   progress: (event: StreamEvent) => void,
@@ -347,5 +356,79 @@ export async function analyzeDocument(
       chunkCount,
       proseMode: 'extractive',
     },
+  };
+}
+
+export async function analyzeDocument(
+  request: AnalysisRequest,
+  signal: AbortSignal,
+  progress: (event: StreamEvent) => void,
+  provider: AiProvider,
+): Promise<{ result: AnalysisResult; meta: AnalysisMeta }> {
+  const started = Date.now();
+  const extracted = await extractDocument(request, signal, progress, provider);
+  const sources = summarySources(extracted.result);
+  progress({ type: 'progress', stage: 'analysis', message: 'Piszę krótkie podsumowanie…' });
+  const summary = await validatedReply(
+    provider,
+    [
+      { role: 'system', content: SUMMARY_PROMPT },
+      {
+        role: 'user',
+        content: JSON.stringify({ language: extracted.result.document.language, sources }),
+      },
+    ],
+    z.toJSONSchema(summaryDraftSchema(sources)),
+    async (value) => {
+      const resolved = resolveSummary(value, sources);
+      progress({
+        type: 'progress',
+        stage: 'validation',
+        message: 'Sprawdzam podsumowanie ze źródłami…',
+      });
+      // A separate review checks relationships and qualifications that numeric
+      // matching cannot prove. This is still model judgment, not a guarantee.
+      const review = summaryReviewSchema.parse(
+        JSON.parse(
+          await provider.chat(
+            [
+              { role: 'system', content: SUMMARY_REVIEW_PROMPT },
+              {
+                role: 'user',
+                content: JSON.stringify({
+                  language: extracted.result.document.language,
+                  sources,
+                  ...resolved.draft,
+                }),
+              },
+            ],
+            z.toJSONSchema(summaryReviewSchema),
+            signal,
+            1600,
+          ),
+        ),
+      );
+      if (!review.supported || review.issues.length)
+        throw new InvalidModelReply(
+          `Summary is not supported by its sources: ${review.issues.join('; ') || 'Check every claim, qualification and amendment.'}`,
+        );
+      return resolved;
+    },
+    signal,
+    3000,
+    () =>
+      progress({
+        type: 'progress',
+        stage: 'validation',
+        message: 'Poprawiam podsumowanie — jedna ponowna próba…',
+      }),
+  );
+  return {
+    result: resultSchema.parse({
+      ...extracted.result,
+      summary: summary.summary,
+      summarySentences: summary.summarySentences,
+    }),
+    meta: { ...extracted.meta, elapsedMs: Date.now() - started, proseMode: 'generated' },
   };
 }

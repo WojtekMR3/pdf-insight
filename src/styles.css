@@ -989,7 +989,8 @@ footer button {
 .summary-card {
   border-top: 3px solid var(--button-bg);
 }
-.summary-card > p {
+.summary-card > p,
+.summary-card > div > p {
   overflow-wrap: anywhere;
   font-size: 1rem;
   line-height: 1.8;
@@ -1562,7 +1563,8 @@ th:last-child {
     overflow-wrap: anywhere;
     font-size: 1rem;
   }
-  .summary-card > p {
+  .summary-card > p,
+  .summary-card > div > p {
     overflow-wrap: anywhere;
     font-size: 1rem;
   }
@@ -1658,4 +1660,25 @@ th:last-child {
 }
 .summary-card > p + p {
   margin-top: 12px;
+}
+
+.summary-card > div + div {
+  margin-top: 1rem;
+}
+.summary-card details {
+  margin-top: 0.4rem;
+}
+.summary-card details > summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.summary-card blockquote {
+  margin: 0.7rem 0 0;
+  padding-left: 1rem;
+  border-left: 2px solid currentColor;
+}
+.summary-card blockquote p {
+  margin: 0 0 0.3rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }

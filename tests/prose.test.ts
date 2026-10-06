@@ -5,7 +5,7 @@ import {
   proseSelectionSchema,
   resolveProse,
 } from '../server/prose';
-import { analyzeDocument } from '../server/analysis';
+import { extractDocument } from '../server/analysis';
 import type { AiProvider } from '../server/ai';
 import { modelResult } from './fixtures/model-result';
 
@@ -43,7 +43,7 @@ describe('Extractive summary and key point safety', () => {
     const chat = vi
       .fn<AiProvider['chat']>()
       .mockResolvedValue(JSON.stringify({ ...modelResult, amounts: { USD: ['a1'] } }));
-    const { result } = await analyzeDocument(
+    const { result } = await extractDocument(
       { ...request, pageCount: 2, pages: source },
       new AbortController().signal,
       () => {},
@@ -75,7 +75,7 @@ describe('Extractive summary and key point safety', () => {
         keyPoints: [invented, invented, invented],
       }),
     );
-    const { result, meta } = await analyzeDocument(
+    const { result, meta } = await extractDocument(
       request,
       new AbortController().signal,
       () => {},
@@ -97,7 +97,7 @@ describe('Extractive summary and key point safety', () => {
         JSON.stringify({ ...selection, summaryPassages: ['p1', 'p2', 'invented fee date'] }),
       );
     await expect(
-      analyzeDocument(request, new AbortController().signal, () => {}, provider(chat)),
+      extractDocument(request, new AbortController().signal, () => {}, provider(chat)),
     ).rejects.toThrow('ponownej próbie');
     expect(chat).toHaveBeenCalledTimes(2);
   });
@@ -131,7 +131,7 @@ describe('Extractive summary and key point safety', () => {
     ).toBe(false);
     const chat = vi.fn<AiProvider['chat']>();
     await expect(
-      analyzeDocument(
+      extractDocument(
         {
           ...request,
           pages: [{ number: 1, text: 'Only this one sentence appears in the document.' }],
@@ -164,7 +164,7 @@ describe('Extractive summary and key point safety', () => {
       .fn<AiProvider['chat']>()
       .mockResolvedValueOnce(JSON.stringify({ text }))
       .mockResolvedValueOnce(JSON.stringify(selection));
-    const { result } = await analyzeDocument(
+    const { result } = await extractDocument(
       { ...request, pages: [{ number: 1, text: '', image: 'YWJj' }] },
       new AbortController().signal,
       () => {},

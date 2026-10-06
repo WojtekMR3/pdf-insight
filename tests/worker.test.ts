@@ -50,39 +50,43 @@ it('enforces rate, content type, JSON schema and streaming body size limits', as
 });
 
 it('streams a schema-validated result using a mocked Gemini response without exposing the key', async () => {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+  const responseFor = (value: unknown) =>
     new Response(
       JSON.stringify({
         candidates: [
-          {
-            finishReason: 'STOP',
-            content: {
-              parts: [
-                {
-                  text: JSON.stringify({
-                    document: {
-                      fileName: 'file.pdf',
-                      pages: 1,
-                      language: 'en',
-                      type: 'raport',
-                      title: null,
-                      date: null,
-                    },
-                    summaryPassages: ['p1', 'p2', 'p3'],
-                    keyPointPassages: ['p1', 'p2', 'p3'],
-                    entities: { organizations: [], people: [] },
-                    amounts: {},
-                    dates: [],
-                    keywords: [],
-                  }),
-                },
-              ],
-            },
-          },
+          { finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(value) }] } },
         ],
       }),
-    ),
-  );
+    );
+  vi.spyOn(globalThis, 'fetch')
+    .mockResolvedValueOnce(
+      responseFor({
+        document: {
+          fileName: 'file.pdf',
+          pages: 1,
+          language: 'en',
+          type: 'raport',
+          title: null,
+          date: null,
+        },
+        summaryPassages: ['p1', 'p2', 'p3'],
+        keyPointPassages: ['p1', 'p2', 'p3'],
+        entities: { organizations: [], people: [] },
+        amounts: {},
+        dates: [],
+        keywords: [],
+      }),
+    )
+    .mockResolvedValueOnce(
+      responseFor({
+        sentences: [
+          { text: 'The document reports on a project.', sourceIds: ['s1'] },
+          { text: 'The work has been completed.', sourceIds: ['s2'] },
+          { text: 'It gives no price for the service.', sourceIds: ['s3'] },
+        ],
+      }),
+    )
+    .mockResolvedValueOnce(responseFor({ supported: true, issues: [] }));
   const response = await worker.fetch(
     request(
       JSON.stringify({
@@ -109,4 +113,6 @@ it('streams a schema-validated result using a mocked Gemini response without exp
     .map((line) => JSON.parse(line));
   expect(events.at(-1).type).toBe('result');
   expect(events.at(-1).meta.source).toBe('cloud-ai');
+  expect(events.at(-1).meta.proseMode).toBe('generated');
+  expect(events.at(-1).result.summarySentences).toHaveLength(3);
 });
