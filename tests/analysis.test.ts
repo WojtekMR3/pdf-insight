@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { analyzeDocument, validatedReply } from '../server/analysis';
+import { extractDocument, validatedReply } from '../server/analysis';
 import { splitPages } from '../server/chunks';
 import { AppError, InvalidModelReply } from '../server/errors';
 import { checkAmendments } from '../server/grounding';
@@ -68,7 +68,7 @@ describe('Single retry and source accuracy', () => {
       .mockRejectedValue(
         new AppError('Wyczerpano chwilowy limit AI. Spróbuj ponownie później.', 429),
       );
-    await expect(analyzeDocument(scanned(2), signal(), () => {}, provider(chat))).rejects.toThrow(
+    await expect(extractDocument(scanned(2), signal(), () => {}, provider(chat))).rejects.toThrow(
       'Wyczerpano chwilowy limit AI',
     );
     expect(chat).toHaveBeenCalledTimes(1);
@@ -79,7 +79,7 @@ describe('Single retry and source accuracy', () => {
       .mockResolvedValueOnce('not json')
       .mockResolvedValueOnce('still not json')
       .mockResolvedValue(JSON.stringify(modelResult));
-    const { meta } = await analyzeDocument(scanned(1), signal(), () => {}, provider(chat));
+    const { meta } = await extractDocument(scanned(1), signal(), () => {}, provider(chat));
     expect(meta.unreadPages).toEqual([1]);
   });
   it('uses verified date wording, discarding an incorrect AI date label', async () => {
@@ -91,7 +91,7 @@ describe('Single retry and source accuracy', () => {
         dateLabels: ['Data wejścia nowej stawki'],
       }),
     );
-    const result = await analyzeDocument(
+    const result = await extractDocument(
       {
         fileName: 'actual.pdf',
         fileSize: 1000,
@@ -167,7 +167,7 @@ describe('Long documents', () => {
       expect(input).toContain('AMENDMENT changes the scope.');
       return JSON.stringify(modelResult);
     });
-    const result = await analyzeDocument(
+    const result = await extractDocument(
       {
         fileName: 'long.pdf',
         fileSize: 2000,
@@ -229,7 +229,7 @@ describe('Long documents', () => {
   it('re-condenses selected passages, not the whole document, when evidence is dense', async () => {
     const chat = verbatimModel();
     const pages = numericPages(120);
-    await analyzeDocument(
+    await extractDocument(
       { fileName: 'dense.pdf', fileSize: 1000, pageCount: pages.length, pages },
       signal(),
       () => {},
@@ -241,7 +241,7 @@ describe('Long documents', () => {
   it('reduces a dense document that fits one chunk in about three requests', async () => {
     const chat = verbatimModel();
     const pages = numericPages(24);
-    await analyzeDocument(
+    await extractDocument(
       { fileName: 'mid.pdf', fileSize: 1000, pageCount: pages.length, pages },
       signal(),
       () => {},
@@ -253,7 +253,7 @@ describe('Long documents', () => {
   it('sends fewer chunks to a provider with a larger context window', async () => {
     const chat = verbatimModel();
     const pages = numericPages(60);
-    const { meta } = await analyzeDocument(
+    const { meta } = await extractDocument(
       { fileName: 'long.pdf', fileSize: 1000, pageCount: pages.length, pages },
       signal(),
       () => {},
@@ -273,7 +273,7 @@ describe('Untrusted document instructions', () => {
         amounts: { PLN: ['a1'] },
       }),
     );
-    const { result } = await analyzeDocument(
+    const { result } = await extractDocument(
       {
         fileName: 'umowa.pdf',
         fileSize: 1000,
