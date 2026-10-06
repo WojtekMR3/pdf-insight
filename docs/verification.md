@@ -4,7 +4,7 @@ Checks performed on 2026-10-06 with Node 22.17.1, Chrome, Ollama `qwen3.5:9b`, a
 
 ## Automated checks
 
-`npm run check` runs strict TypeScript, ESLint, Prettier, 87 Vitest tests, the production frontend build and the Cloudflare Worker bundle. The current PR revision passes these checks locally; its hosted behavior must still be verified after deployment.
+`npm run check` runs strict TypeScript, ESLint, Prettier, 102 Vitest tests, the production frontend build and the Cloudflare Worker bundle. The natural-summary revision is validated locally before publishing; live checks for that revision are recorded separately below.
 
 Tests cover required JSON fields, cardinality, ISO codes, valid dates, input limits, source quotations, amount/currency formats, amendment precedence, chunk coverage, malformed replies and the single correction attempt. Regressions cover decimal and minus-sign preservation, percentages, excerpt boundaries, quotation order, split UTF-8 stream chunks, terminal results, cancellation, response errors and denied browser storage. Provider tests mock Gemini; Worker tests cover exact origins, preflight, configuration, rate limits, request sizes, malformed bodies and streamed results.
 
@@ -42,10 +42,16 @@ On the supplied contract, the candidate sentence catalog shrank from 143 entries
 
 ## Remaining limits
 
-Extractive summaries copy source sentences, preventing invented summary wording but not incomplete or misleading selection. Original and amended terms can appear together. Metadata and entities still involve model judgment; OCR can misread images. Very short PDFs with fewer than three eligible sentences return an explicit error. Results require comparison with the source for important decisions.
+The current summary is generated from selected source sentences and independently reviewed by the same provider. Numeric and citation checks reject several concrete failures, but model review does not guarantee semantic accuracy or complete source selection. Original and amended terms can appear together. Metadata and entities still involve model judgment; OCR can misread images. Very short PDFs with fewer than three eligible sentences return an explicit error. Results require comparison with the source for important decisions.
 
 The public under-30-second end-to-end target, large-request CPU/memory limits, external-device access and 14-day availability remain unverified. A successful deployment cannot prove future uptime. The candidate's deadline and understanding of the implementation are also outside automated verification.
 
 ## PR regression review
 
 A second review reproduced three data-loss regressions introduced by the readability changes: ordinary documentation obligations were classified as AI commands, complete amendment clauses longer than 500 characters disappeared when shorter sentences were available, and separate events sharing a date lost their contexts. Thirteen regression cases cover normal obligations, known direct injection commands, long amendment retention and date-event preservation. Five cases failed before the fixes; all pass with the corrections. Tests use synthetic document text and mocked model selections through the extraction pipeline; they do not establish live Gemini behavior.
+
+## Natural-language summaries
+
+The user retained the brief's 10 MB maximum and requested natural summaries with source references. Fifteen new tests cover source-resolved citations and OCR labels, unsupported numbers/signs/dates, missing or invented references, sentence count/completeness, Polish abbreviations, amended counts, a mocked semantic rejection of invented recurring billing, a single correction, review quota propagation, JSON export, citation rendering and legacy result compatibility. Existing extraction tests still test evidence selection independently. The Worker integration test exercises extraction, drafting and review through mocked Gemini transport.
+
+A local browser run using the revised prompts and real Ollama produced three natural sentences for the synthetic invoice in 3.234 seconds of backend time. It retained USD 1,250.50 and the payment deadline, and expanding a citation displayed the matching exact quotations. The JSON view retained the natural summary and its references. A synthetic Polish agreement also produced three Polish summary sentences in 3.618 seconds. Direct backend analysis of a synthetic invoice image exercised real local OCR and the new summary flow in 6.071 seconds, preserving USD 2,450.75 and OCR attribution on every summary reference. This last test bypassed browser file selection. Live cloud checks for this release are pending deployment; older hosted timings above describe extractive versions.
