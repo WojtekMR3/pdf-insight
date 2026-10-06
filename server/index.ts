@@ -78,10 +78,10 @@ const server = createServer(async (req, res) => {
         return;
       }
       if (req.method === 'GET' && url.pathname === '/api/sample') {
-        const sample = path.join(root, 'Test_PDF_Insight_umowa_14-2026.pdf');
+        const sample = path.join(root, 'src/assets/example-invoice.pdf');
         res.writeHead(200, {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': 'inline; filename="Test_PDF_Insight_umowa_14-2026.pdf"',
+          'Content-Disposition': 'inline; filename="example-invoice.pdf"',
         });
         createReadStream(sample).pipe(res);
         return;
