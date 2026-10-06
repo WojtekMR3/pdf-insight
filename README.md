@@ -1,6 +1,6 @@
 # PDF Insight
 
-PDF Insight turns a PDF into a short summary and validated JSON. It supports text extraction, scanned-page OCR, long-document chunking, local history, and JSON export. The Polish interface has dark and light themes, a full-height sidebar at the left edge, a centered content area, and a locally bundled background.
+PDF Insight turns a PDF into a short summary and validated JSON. It supports text extraction, scanned-page OCR, long-document chunking, local history, and JSON export. The Polish interface has dark and light themes, a full-height sidebar at the left edge, a centered content area, larger reading text, and a short upload-to-export flow. Model and hosting details are documented here rather than displayed on the main screens; the upload screen retains a short data-processing notice.
 
 ![PDF Insight with its full-height sidebar](docs/preview-sidebar.jpg)
 
@@ -14,7 +14,7 @@ Double-click **Start PDF Insight.cmd**. It starts the local backend in the backg
 
 1. Choose a PDF or use **Przykładowa faktura** for a synthetic one-page invoice. The supplied interview contract and its extracted fixtures remain local and are excluded from the public repository and demo.
 2. Click **Analizuj dokument**. Review the summary, source quotations, structured data and JSON.
-3. Click **Pobierz JSON** to export. Disable **Zachowaj wynik w lokalnej historii** if the result should not be saved in this browser.
+3. Click **Pobierz JSON** to export. Disable **Zapisz wynik w historii na tym urz?dzeniu** if the result should not be saved in this browser.
 
 Local mode needs no API key. Ollama must be running with `qwen3.5:9b` installed. PDF.js reads the existing text layer in the browser. Pages with little or no text are rendered and transcribed by the Qwen vision model; the same model analyzes the resulting text. Local mode sends no document content to a cloud AI service.
 
