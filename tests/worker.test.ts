@@ -17,9 +17,14 @@ const request = (body: string, headers: Record<string, string> = {}) =>
 afterEach(() => vi.restoreAllMocks());
 
 it('allows only the exact configured origin and handles preflight', async () => {
-  expect(
-    (await worker.fetch(request('{}', { Origin: 'https://demo.example.evil.test' }), env())).status,
-  ).toBe(403);
+  const denied = await worker.fetch(
+    request('{}', { Origin: 'https://demo.example.evil.test' }),
+    env(),
+  );
+  expect(denied.status).toBe(403);
+  expect(denied.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  expect(denied.headers.get('Cache-Control')).toBe('no-store');
+  expect(denied.headers.get('Vary')).toBe('Origin');
   const preflight = await worker.fetch(
     new Request('https://api.example/api/analyze', {
       method: 'OPTIONS',
