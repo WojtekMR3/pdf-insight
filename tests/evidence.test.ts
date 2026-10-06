@@ -107,13 +107,14 @@ describe('Deterministic numeric evidence', () => {
     expect(fee?.source.quote).toContain('Wynagrodzenie za wdrożenie');
   });
 
-  it('returns each selected date once, with readable single-line context', () => {
+  it('deduplicates date IDs while preserving distinct contexts and readable line wrapping', () => {
     const catalog = buildEvidence([
       { number: 1, text: 'Umowę zawarto w dniu 12.03.2026 r.\nw Gdańsku przez obie Strony.' },
       { number: 2, text: 'Aneks do umowy z dnia 12.03.2026 r. podpisano później.' },
     ]);
-    const { dates } = resolveEvidence(catalog, [], ['d1', 'd2']);
-    expect(dates).toHaveLength(1);
+    const { dates } = resolveEvidence(catalog, [], ['d1', 'd2', 'd1']);
+    expect(dates).toHaveLength(2);
+    expect(dates[1].context).toBe('Aneks do umowy z dnia 12.03.2026 r. podpisano później.');
     expect(dates[0].context).toBe(
       'Umowę zawarto w dniu 12.03.2026 r. w Gdańsku przez obie Strony.',
     );
