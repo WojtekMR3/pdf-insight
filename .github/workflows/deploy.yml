@@ -1,0 +1,102 @@
+name: Check and deploy PDF Insight
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      verify_sample:
+        description: Analyze the synthetic invoice through the hosted Gemini backend
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pdf-insight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  backend:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      api_url: ${{ steps.worker.outputs.deployment-url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Configure exact frontend origin and selected model
+        run: node scripts/configure-deployment.mjs
+        env:
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      - name: Deploy backend and its secret
+        id: worker
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.136.3'
+          command: deploy
+          secrets: |
+            GEMINI_API_KEY
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Verify API readiness and CORS
+        run: npm run verify:cloud
+        env:
+          API_URL: ${{ steps.worker.outputs.deployment-url }}
+      - name: Verify synthetic invoice and structured data
+        if: github.event_name == 'workflow_dispatch' && inputs.verify_sample
+        run: npm run verify:cloud -- --sample
+        env:
+          API_URL: ${{ steps.worker.outputs.deployment-url }}
+
+  pages:
+    needs: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build frontend for the repository path
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ needs.backend.outputs.api_url }}
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: dist
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
+        id: deployment
