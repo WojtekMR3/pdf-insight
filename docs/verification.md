@@ -4,7 +4,7 @@ Checks performed on 2026-10-06 with Node 22.17.1, Chrome, Ollama `qwen3.5:9b`, a
 
 ## Automated checks
 
-`npm run check` runs strict TypeScript, ESLint, Prettier, 55 Vitest tests, the production frontend build and the Cloudflare Worker bundle. All passed before deployment.
+`npm run check` runs strict TypeScript, ESLint, Prettier, 72 Vitest tests, the production frontend build and the Cloudflare Worker bundle. All passed before deployment.
 
 Tests cover required JSON fields, cardinality, ISO codes, valid dates, input limits, source quotations, amount/currency formats, amendment precedence, chunk coverage, malformed replies and the single correction attempt. Regressions cover decimal and minus-sign preservation, percentages, excerpt boundaries, quotation order, split UTF-8 stream chunks, terminal results, cancellation, response errors and denied browser storage. Provider tests mock Gemini; Worker tests cover exact origins, preflight, configuration, rate limits, request sizes, malformed bodies and streamed results.
 
@@ -33,6 +33,12 @@ The [public demo](https://wojtekmr3.github.io/pdf-insight/) was then tested in C
 An earlier manual run detected an inconsistent repeat response for an unrelated origin. Worker responses now always include `Vary: Origin`, including rejections, and verification requests bypass caches and report response diagnostics. The subsequent manual run passed both origin checks. The exact cause of the initial inconsistent response was not established.
 
 The selected free-tier model is `gemini-3.1-flash-lite`; the project's dashboard currently reports 15 requests per minute, 250,000 input tokens per minute and 500 requests per day. Long documents, OCR and correction attempts can consume multiple requests. Quotas can change.
+
+## Review fixes
+
+A follow-up review of the deployed version found that running page headers and abbreviations such as `ul.` and `ust.` produced fragments in the live contract summary; that embedded AI instructions were excluded only by the prompt; that a dense long document could need 76 AI requests, above both the Workers Free limit of 50 subrequests and the 15-requests-per-minute quota; that OCR quota or timeout errors were hidden as unreadable pages; and that code errors were retried as invalid AI replies. Seventeen new tests cover the fixes.
+
+On the supplied contract, the candidate sentence catalog shrank from 143 entries to 98, with no page headers, clause-number fragments or embedded instructions; the injected "1 PLN" amount left the evidence catalog while all other amounts and dates stayed identical. A local end-to-end run with `qwen3.5:9b` took 20.3 seconds including OCR and produced complete summary sentences. The frontend build output is byte-identical to the previously deployed version; the changes are backend-only.
 
 ## Remaining limits
 

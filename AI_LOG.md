@@ -2,7 +2,7 @@
 
 ## Tools used
 
-Codex assisted with reading the brief, planning, implementation, dependency setup, testing, browser checks and deployment. The application uses the existing Ollama installation and `qwen3.5:9b` locally. The public demo uses Gemini 3.1 Flash-Lite through a Cloudflare Worker. Provider behavior has unit coverage and live text-invoice/OCR checks. Runtime prompts are in `server/analysis.ts`.
+Codex assisted with reading the brief, planning, implementation, dependency setup, testing, browser checks and deployment. Claude Code then reviewed the deployed code and the live demo, and implemented the follow-up fixes described at the end of this log. The application uses the existing Ollama installation and `qwen3.5:9b` locally. The public demo uses Gemini 3.1 Flash-Lite through a Cloudflare Worker. Provider behavior has unit coverage and live text-invoice/OCR checks. Runtime prompts are in `server/analysis.ts`.
 
 ## Five key prompts and decisions
 
@@ -28,6 +28,15 @@ Codex assisted with reading the brief, planning, implementation, dependency setu
 - White text on the initial blue button had only 3.61:1 contrast. Darkening the button raised it to 5.11:1. File URL permission initially blocked automated file selection; after the user enabled it, real PDF uploads and invalid-file errors were tested.
 
 - The user found the interface too dense and its text too small. The follow-up simplifies upload, results and help copy, removes repeated feature descriptions and model badges, and increases body text to 16 px with most secondary labels at 14 px. The required cloud-processing disclosure, error states, evidence references and JSON contract remain intact.
+
+## Follow-up review of the deployed demo
+
+- Prompt: "Review the codebase and the live demo against the brief, then fix what you find without breaking the public demo." The live contract summary contained a running page header and fragments such as "2 Umowy, który…", because sentence segmentation ended sentences after `ul.` and `ust.` and joined repeated headers to the first sentence. Sentence selection now ignores lines repeated on most pages, keeps sentences whole across common abbreviations and starts new sentences at clause numbers. A fallback keeps the previous behaviour when fewer than three sentences would remain.
+- The injected instruction and its "1 PLN" amount were still offered to the model; only the prompt prevented their use. A model reply selecting them passed every check in a mocked test. Instruction-like sentences are now removed in code from both catalogs, and evidence excerpts stop before them.
+- A mocked 200-page dense document needed 76 AI requests, because the second reduction pass re-read the whole document in 12,000-character chunks. It now reduces the already selected passages, Gemini uses larger chunks, and the hosted provider stops after 40 requests.
+- OCR quota and timeout errors were hidden as unreadable pages, and code errors were retried as invalid AI replies. Both now stop with an accurate message. Temporary 5xx responses receive one transport retry and a Polish message instead of "check backend configuration".
+- Two heuristics matched the supplied test document literally (its footer format and its "Podsumowanie finansowe" heading). Generic rules replaced them: lines repeated across pages, and a penalty for excerpts listing many amounts.
+- The review deliberately left the frontend unchanged. Any frontend change renames the lazily loaded PDF chunk, which would break tabs opened before the deployment. Known UI follow-ups: a retry button for the initial connection check, the sidebar "Nowa analiza" button while a result is shown, drops outside the drop zone, and per-record history validation.
 
 ## Human review
 

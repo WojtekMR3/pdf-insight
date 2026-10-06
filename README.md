@@ -12,9 +12,9 @@ The public demo uses GitHub Pages, a Cloudflare Worker and Gemini 3.1 Flash-Lite
 
 Double-click **Start PDF Insight.cmd**. It starts the local backend in the background and opens the browser. It does not install a Windows startup service.
 
-1. Choose a PDF or use **Przykładowa faktura** for a synthetic one-page invoice. The supplied interview contract and its extracted fixtures remain local and are excluded from the public repository and demo.
+1. Choose a PDF or use **Wypróbuj przykład** for a synthetic one-page invoice. The supplied interview contract and its extracted fixtures remain local and are excluded from the public repository and demo.
 2. Click **Analizuj dokument**. Review the summary, source quotations, structured data and JSON.
-3. Click **Pobierz JSON** to export. Disable **Zapisz wynik w historii na tym urz?dzeniu** if the result should not be saved in this browser.
+3. Click **Pobierz JSON** to export. Disable **Zapisz wynik w historii na tym urządzeniu** if the result should not be saved in this browser.
 
 Local mode needs no API key. Ollama must be running with `qwen3.5:9b` installed. PDF.js reads the existing text layer in the browser. Pages with little or no text are rendered and transcribed by the Qwen vision model; the same model analyzes the resulting text. Local mode sends no document content to a cloud AI service.
 
@@ -59,7 +59,9 @@ Cloud mode sends document text and scan images to Google Gemini API and changes 
 
 The browser validates and extracts the PDF, then streams a request to the backend. Long documents are split into overlapping chunks. The AI selects source passages from each chunk; every selected quotation is checked before merging. Matching preserves punctuation, decimal separators, signs and case, allowing only whitespace and equivalent Unicode normalization.
 
-The backend builds an evidence catalog of explicit dates and monetary values. The AI selects IDs from that catalog instead of retyping numbers, years or date descriptions. The backend resolves them to the required `amounts` and `dates` fields, with exact source excerpts and page numbers. Detected amendment amounts are retained, and superseded user/seat/license counts receive additional checks. Summary and key points also use source IDs: the backend copies three to five selected sentences and three to seven key points in document order, with page references and OCR labels. It does not accept model-written prose as a fallback.
+The backend builds an evidence catalog of explicit dates and monetary values. The AI selects IDs from that catalog instead of retyping numbers, years or date descriptions. The backend resolves them to the required `amounts` and `dates` fields, with exact source excerpts and page numbers. Detected amendment amounts are retained, and superseded user/seat/license counts receive additional checks. Summary and key points also use source IDs: the backend copies three to five selected sentences and three to seven key points in document order, with page references and OCR labels. It does not accept model-written prose as a fallback. Candidate sentences skip running page headers and footers, stay whole across common abbreviations such as `ul.` and `ust.`, start after clause numbers, and avoid repeating summary sentences as key points.
+
+Sentences that address an AI system (for example "ignore previous instructions" or "write in the summary that…") are removed in code before the final model request, together with the amounts and dates inside them. Prompt instructions are a second layer, not the only defence.
 
 Both client and server validate the result with Zod. Malformed JSON, invalid fields, truncation or failed source checks receive exactly one correction attempt, followed by an error if still invalid. The final JSON retains every field required by the brief; source evidence and analysis metadata are additional fields.
 
@@ -71,11 +73,13 @@ See [the code walkthrough](docs/architecture.md) for file responsibilities and d
 - OCR covers up to eight pages with little or no text. Mixed pages with substantial text and scanned regions may be missed. Unread pages are reported and results marked incomplete.
 - Chunking processes every text chunk but selects important passages for merging. Details can be omitted; long documents, multiple scans and retries can take longer than 30 seconds.
 - Structured evidence recognizes common monetary formats and Polish/English date expressions. Ambiguous currencies or unsupported formats may be omitted. Equal amount/currency pairs are deduplicated, so separate obligations with the same value can collapse into one entry.
-- Extractive summaries require at least three eligible source sentences. Very short PDFs, tables without sentences, or documents whose sentences cannot be retained during chunking can return a clear error instead of a summary. Sentence segmentation can mistake abbreviations or numbered clauses for boundaries.
+- Extractive summaries require at least three eligible source sentences. Very short PDFs, tables without sentences, or documents whose sentences cannot be retained during chunking can return a clear error instead of a summary. Sentence segmentation knows common Polish and English abbreviations only; a heading printed directly above a sentence can still appear at its start.
+- Numeric dates with slashes are read day-first (European order), so US-style `10/01/2026` is read as 10 January.
+- The hosted backend makes at most 40 AI requests per analysis (Cloudflare Workers Free allows 50) and retries a temporarily unavailable AI service once. Larger documents receive a clear error asking to split the file.
 - Verbatim quotations prevent the model from inventing summary wording, but selecting quotations can omit context or mix original and amended terms. Document metadata, entities and keywords still involve model judgment. OCR can also misread an image. Important results require comparison with the original PDF.
 - History stores the latest five results in this browser, not the original PDFs. It can be disabled per analysis or cleared through the UI.
 - The server does not retain uploaded PDFs or log their content. PDF contents are treated as untrusted data; model prompts prohibit following embedded commands or links. React renders text without `dangerouslySetInnerHTML`.
-- Local requests are origin-restricted, size-limited and rate-limited to six analyses per minute, with one analysis at a time. The optional hosted adapter has its own exact origin allowlist and rate-limit binding. CORS is not authentication.
+- Local requests are origin-restricted, size-limited and rate-limited to six analyses per minute, with one analysis at a time. The optional hosted adapter has its own exact origin allowlist and rate-limit binding; Cloudflare's limiter is approximate (counted per location), so short bursts can exceed six requests. CORS is not authentication.
 
 ## Verification
 
@@ -83,7 +87,7 @@ See [the code walkthrough](docs/architecture.md) for file responsibilities and d
 npm run check
 ```
 
-Runs strict TypeScript, ESLint, Prettier, 55 Vitest tests, the frontend production build, and the optional worker bundle. Test coverage includes schema rejection, numeric/source checks, extractive prose, amendment retention, chunk coverage, retry behavior, stream completion/cancellation, unavailable browser storage, mocked provider transport, and hosted handler protections.
+Runs strict TypeScript, ESLint, Prettier, 72 Vitest tests, the frontend production build, and the optional worker bundle. Test coverage includes schema rejection, numeric/source checks, extractive prose, readable sentence selection, embedded-instruction removal, amendment retention, chunk coverage and request limits, retry behavior, stream completion/cancellation, unavailable browser storage, mocked provider transport, and hosted handler protections.
 
 On this PC with an RTX 5080 and `qwen3.5:9b`, the supplied contract completed in approximately **16 seconds warm** and **22 seconds including a cold model load**, including OCR of page 11. These are individual local measurements, not an all-document or hosted performance guarantee. An uploaded English invoice completed in 3 seconds. See [verification and remaining submission requirements](docs/verification.md) for scope and reproducible commands.
 
