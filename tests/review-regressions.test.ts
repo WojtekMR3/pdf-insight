@@ -1,5 +1,5 @@
 ﻿import { describe, expect, it } from 'vitest';
-import { analyzeDocument } from '../server/analysis';
+import { extractDocument } from '../server/analysis';
 import type { AiProvider } from '../server/ai';
 import { buildEvidence, resolveEvidence } from '../server/evidence';
 import { isDirective } from '../server/sentences';
@@ -36,7 +36,7 @@ const provider: AiProvider = {
 };
 
 const analyze = (pages: { number: number; text: string }[]) =>
-  analyzeDocument(
+  extractDocument(
     { fileName: 'synthetic-contract.pdf', fileSize: 1000, pageCount: pages.length, pages },
     new AbortController().signal,
     () => {},
