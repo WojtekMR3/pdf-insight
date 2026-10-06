@@ -106,7 +106,28 @@ export default function Results({
               <div className="section-label">
                 <FileText size={17} /> W skrócie
               </div>
-              {result.proseSources ? (
+              {result.summarySentences ? (
+                result.summarySentences.map((sentence, index) => (
+                  <div key={index}>
+                    <p>{sentence.text}</p>
+                    <details>
+                      <summary className="source-reference">
+                        Źródła · str.{' '}
+                        {[...new Set(sentence.sources.map((source) => source.page))].join(', ')}
+                      </summary>
+                      {sentence.sources.map((source, sourceIndex) => (
+                        <blockquote key={sourceIndex}>
+                          <p>{source.quote}</p>
+                          <span className="source-reference">
+                            str. {source.page}
+                            {source.origin === 'ocr' ? ' · OCR' : ''}
+                          </span>
+                        </blockquote>
+                      ))}
+                    </details>
+                  </div>
+                ))
+              ) : result.proseSources ? (
                 <>
                   {result.proseSources.summary.map((source, index) => (
                     <p key={index}>
