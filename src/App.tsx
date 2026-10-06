@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowDownToLine,
   ArrowRight,
   Check,
   ChevronRight,
   CircleHelp,
-  Clock3,
-  Cpu,
   FileCheck2,
   FileSearch,
   FileText,
-  FolderOpen,
   History,
   LayoutDashboard,
   LoaderCircle,
@@ -19,7 +15,6 @@ import {
   Plus,
   ScanLine,
   Settings2,
-  ShieldCheck,
   Sparkles,
   Sun,
   Trash2,
@@ -67,7 +62,7 @@ export default function App() {
       setHealth(await getHealth());
     } catch {
       setHealth(null);
-      setHealthError('Nie można połączyć się z backendem. Sprawdź połączenie w ustawieniach.');
+      setHealthError('Nie można połączyć się z usługą. Spróbuj ponownie w sekcji pomocy.');
     }
   }
   useEffect(() => {
@@ -138,7 +133,7 @@ export default function App() {
     abort.current = controller;
     setError('');
     setPhase('analysis');
-    setStatus('Łączę się z AI…');
+    setStatus('Rozpoczynam analizę…');
     startedAt.current = Date.now();
     setElapsed(0);
     try {
@@ -211,68 +206,33 @@ export default function App() {
             </span>
             <span>
               PDF<span className="brand-light">Insight</span>
-              <small>MNIEJ CZYTANIA. WIĘCEJ WIEDZY.</small>
             </span>
           </a>
-          <div className="workspace-label">TWOJA PRZESTRZEŃ</div>
           <nav aria-label="Nawigacja główna">
             <button
               className={view === 'analyze' ? 'nav-button active' : 'nav-button'}
               onClick={() => setView('analyze')}
             >
-              <LayoutDashboard size={18} /> Analiza dokumentu <ChevronRight size={15} />
+              <LayoutDashboard size={18} /> Nowa analiza <ChevronRight size={15} />
             </button>
             <button
               className={view === 'history' ? 'nav-button active' : 'nav-button'}
               disabled={busy}
               onClick={() => setView('history')}
             >
-              <History size={18} /> Historia analiz{' '}
-              <span className="nav-count">{history.length}</span>
+              <History size={18} /> Historia <span className="nav-count">{history.length}</span>
             </button>
           </nav>
-          <div className="sidebar-note">
-            <span className="small-icon">
-              <ShieldCheck size={19} />
-            </span>
-            <strong>{local ? 'Twoje pliki, u Ciebie.' : 'Przejrzyste przetwarzanie.'}</strong>
-            <p>
-              {health
-                ? local
-                  ? 'Dokumenty analizuje model na Twoim komputerze. Bez wysyłania do chmury.'
-                  : 'Treść dokumentu analizuje Google Gemini API. Klucz pozostaje na backendzie.'
-                : 'Sprawdzam dostępność i sposób przetwarzania AI.'}
-            </p>
-            <span className="local-tag">
-              <span className="status-dot" />{' '}
-              {health
-                ? local
-                  ? 'Tryb lokalny'
-                  : 'Tryb API'
-                : healthError
-                  ? 'Brak połączenia'
-                  : 'Łączenie…'}
-            </span>
-          </div>
           <div className="sidebar-bottom">
             <button className="nav-button" onClick={() => dialog.current?.showModal()}>
-              <Settings2 size={18} /> Ustawienia analizy
+              <Settings2 size={18} /> Pomoc i prywatność
             </button>
-            <div className="profile">
-              <span className="profile-avatar">TY</span>
-              <div>
-                <strong>Twoja przestrzeń</strong>
-                <span>Wersja demonstracyjna</span>
-              </div>
-              <span className="profile-dot" />
-            </div>
           </div>
         </aside>
         <div className="main-shell">
           <header className="topbar">
             <div className="breadcrumb">
-              Przestrzeń robocza <ChevronRight size={14} />
-              <strong>{view === 'history' ? 'Historia analiz' : 'Analiza dokumentu'}</strong>
+              {view === 'history' ? 'Historia analiz' : 'Analiza PDF'}
             </div>
             <div className="topbar-actions">
               <button
@@ -282,13 +242,11 @@ export default function App() {
                 <span className="status-dot" />
                 {health
                   ? health.available
-                    ? local
-                      ? 'Lokalne AI połączone'
-                      : 'API AI skonfigurowane'
-                    : 'AI niedostępne'
+                    ? 'Gotowe do analizy'
+                    : 'Usługa niedostępna'
                   : healthError
-                    ? 'Backend niedostępny'
-                    : 'Sprawdzam AI…'}
+                    ? 'Brak połączenia'
+                    : 'Łączenie…'}
               </button>
               <button
                 className="theme-toggle"
@@ -315,9 +273,8 @@ export default function App() {
             {view === 'history' ? (
               <>
                 <div className="page-heading">
-                  <span className="eyebrow">TWOJE DOKUMENTY</span>
-                  <h1>Wróć do ważnych informacji.</h1>
-                  <p>Ostatnie 5 analiz zapisanych wyłącznie w tej przeglądarce.</p>
+                  <h1>Historia analiz</h1>
+                  <p>Ostatnie 5 wyników, zapisane w tej przeglądarce.</p>
                 </div>
                 <div className="history-toolbar">
                   <span>{history.length} zapisanych analiz</span>
@@ -365,8 +322,8 @@ export default function App() {
                 ) : (
                   <div className="card history-empty">
                     <History size={38} />
-                    <h2>Historia zaczyna się tutaj.</h2>
-                    <p>Przeanalizuj pierwszy dokument, aby wrócić do niego później.</p>
+                    <h2>Brak zapisanych analiz</h2>
+                    <p>Tutaj znajdziesz wyniki swoich dokumentów.</p>
                     <button className="button primary" onClick={reset}>
                       <Plus size={16} /> Nowa analiza
                     </button>
@@ -377,18 +334,8 @@ export default function App() {
               <>
                 {!record && (
                   <div className="page-heading">
-                    <span className="eyebrow">
-                      <span className="eyebrow-line" /> OD DOKUMENTU DO KONKRETÓW
-                    </span>
-                    <h1>
-                      Twój dokument.
-                      <br />
-                      <span>Najważniejsze informacje.</span>
-                    </h1>
-                    <p>
-                      Dodaj PDF. Otrzymaj zwięzłe podsumowanie, kluczowe dane
-                      <br className="desktop-br" /> i gotowy do pobrania plik JSON.
-                    </p>
+                    <h1>Twój PDF w skrócie.</h1>
+                    <p>Dodaj dokument. Otrzymaj podsumowanie, ważne dane i plik JSON.</p>
                   </div>
                 )}
                 {record && (
@@ -419,7 +366,7 @@ export default function App() {
                     <section className="card upload-card" aria-label="Dodaj dokument">
                       <div className="card-topline">
                         <span>
-                          <span className="step-number">01</span> Twój dokument
+                          <Upload size={18} /> Dodaj PDF
                         </span>
                         <span className="muted">PDF · do 10 MB</span>
                       </div>
@@ -451,15 +398,14 @@ export default function App() {
                               </span>
                             </span>
                             <strong>
-                              {dragging ? 'Upuść dokument tutaj' : 'Przeciągnij tutaj swój PDF'}
+                              {dragging ? 'Upuść PDF tutaj' : 'Przeciągnij tutaj PDF'}
                             </strong>
                             <span>
-                              lub <b>wybierz plik z komputera</b>
+                              lub <b>wybierz plik</b>
                             </span>
-                            <small>Umowa, faktura, raport — znajdź to, co istotne.</small>
                           </button>
                           <div className="sample-divider">
-                            <span /> LUB WYPRÓBUJ <span />
+                            <span /> Nie masz pliku? <span />
                           </div>
                           <button
                             className="sample-button"
@@ -469,8 +415,8 @@ export default function App() {
                               <FileText size={21} />
                             </span>
                             <span>
-                              <strong>Przykładowa faktura</strong>
-                              <small>1 strona · fikcyjne dane demonstracyjne</small>
+                              <strong>Wypróbuj przykład</strong>
+                              <small>Faktura · 1 strona</small>
                             </span>
                             <ArrowRight size={18} />
                           </button>
@@ -479,7 +425,7 @@ export default function App() {
                       {phase === 'extracting' && (
                         <div className="extracting">
                           <LoaderCircle className="spin" size={30} />
-                          <h3>Przygotowuję Twój dokument</h3>
+                          <h3>Odczytuję PDF…</h3>
                           <p role="status">{status}</p>
                           <button className="text-button" onClick={cancel}>
                             Anuluj
@@ -507,12 +453,11 @@ export default function App() {
                                 {(document.request.fileSize / 1024).toFixed(0)} KB
                               </p>
                               <span className="success-line">
-                                <Check size={15} /> Warstwa tekstowa odczytana
+                                <Check size={15} /> Plik gotowy do analizy
                               </span>
                               {document.scanPages.length > 0 && (
                                 <span className="scan-line">
-                                  <ScanLine size={15} /> OCR: {document.scanPages.length}{' '}
-                                  {document.scanPages.length === 1 ? 'strona' : 'stron'} ze skanem
+                                  <ScanLine size={15} /> Wykryte skany: {document.scanPages.length}
                                 </span>
                               )}
                             </div>
@@ -538,9 +483,7 @@ export default function App() {
                                 onClick={() => setShowSource(!showSource)}
                               >
                                 <FileSearch size={16} />
-                                {showSource
-                                  ? 'Ukryj tekst źródłowy'
-                                  : 'Podejrzyj tekst przed analizą'}
+                                {showSource ? 'Ukryj tekst' : 'Podgląd tekstu'}
                                 <ChevronRight size={15} />
                               </button>
                               {showSource && <pre className="source-preview">{document.text}</pre>}
@@ -550,7 +493,7 @@ export default function App() {
                                   checked={remember}
                                   onChange={(event) => setRemember(event.target.checked)}
                                 />{' '}
-                                Zachowaj wynik w lokalnej historii
+                                Zapisz wynik w historii na tym urządzeniu
                               </label>
                               <button
                                 className="button primary analyze-button"
@@ -563,9 +506,7 @@ export default function App() {
                               </button>
                               {!health?.available && (
                                 <p className="inline-help">
-                                  {local
-                                    ? 'Uruchom Ollama i sprawdź połączenie w ustawieniach.'
-                                    : 'Sprawdź połączenie i konfigurację AI w ustawieniach.'}
+                                  Usługa niedostępna. Sprawdź połączenie w sekcji pomocy.
                                 </p>
                               )}
                             </>
@@ -588,13 +529,7 @@ export default function App() {
                               </div>
                               <p>{status}</p>
                               <div className="progress-bottom">
-                                <small>
-                                  {local
-                                    ? elapsed > 30
-                                      ? 'Model działa na Twoim komputerze. Analiza może potrwać kilka minut.'
-                                      : 'Pierwsza analiza może potrwać dłużej — model ładuje się do pamięci.'
-                                    : 'Czas analizy zależy od długości dokumentu i dostępności API AI.'}
-                                </small>
+                                <small>Długie dokumenty i skany mogą wymagać więcej czasu.</small>
                                 <button className="text-button" onClick={cancel}>
                                   Anuluj
                                 </button>
@@ -608,103 +543,45 @@ export default function App() {
                         <span>
                           {health
                             ? local
-                              ? 'Plik pozostaje na Twoim komputerze. Analiza przez lokalną Ollama.'
-                              : 'Tekst i obrazy skanów zostaną wysłane przez backend do Google Gemini API. Nie wysyłaj danych poufnych do wersji demonstracyjnej.'
+                              ? 'Dokument jest analizowany tylko na tym komputerze.'
+                              : 'Tekst i skany trafią do Google do analizy. Nie dodawaj danych poufnych.'
                             : 'Sprawdzam sposób przetwarzania dokumentu…'}
                         </span>
                       </div>
                     </section>
                     <aside className="how-it-works">
-                      <span className="eyebrow">PROSTO, KROK PO KROKU</span>
-                      <h2>
-                        Mniej przewijania.
-                        <br />
-                        Więcej konkretów.
-                      </h2>
+                      <h2>Trzy proste kroki</h2>
                       <div className="how-step">
-                        <span>
-                          <Upload size={19} />
-                        </span>
+                        <span>1</span>
                         <div>
-                          <strong>Dodaj dokument</strong>
-                          <p>Wybierz PDF ze swojego komputera lub użyj przykładowej faktury.</p>
+                          <strong>Wybierz PDF</strong>
+                          <p>Własny plik lub gotowy przykład.</p>
                         </div>
                       </div>
                       <div className="how-step">
-                        <span>
-                          <Sparkles size={19} />
-                        </span>
+                        <span>2</span>
                         <div>
-                          <strong>Pozwól AI go przeczytać</strong>
-                          <p>Model wyłuska najważniejsze informacje, kwoty, daty i osoby.</p>
+                          <strong>Kliknij „Analizuj dokument”</strong>
+                          <p>Podsumowanie, kwoty i daty w jednym miejscu.</p>
                         </div>
                       </div>
                       <div className="how-step">
-                        <span>
-                          <ArrowDownToLine size={19} />
-                        </span>
+                        <span>3</span>
                         <div>
-                          <strong>Zabierz gotowe dane</strong>
-                          <p>Przeczytaj podsumowanie lub pobierz uporządkowany plik JSON.</p>
+                          <strong>Pobierz wynik</strong>
+                          <p>Zapisz dane przyciskiem „Pobierz JSON”.</p>
                         </div>
-                      </div>
-                      <div className="local-model">
-                        <Cpu size={18} />
-                        <div>
-                          <strong>
-                            {health
-                              ? local
-                                ? 'AI działa lokalnie'
-                                : 'Analiza przez API AI'
-                              : 'Połączenie z AI'}
-                          </strong>
-                          <span>{health?.model || 'Sprawdzam model…'}</span>
-                        </div>
-                        <span className={`status-dot ${health?.available ? '' : 'gray'}`} />
                       </div>
                     </aside>
-                  </div>
-                )}
-                {!record && (
-                  <div className="feature-row">
-                    <div>
-                      <span>
-                        <FileText size={19} />
-                      </span>
-                      <div>
-                        <strong>Sedno w kilku zdaniach</strong>
-                        <p>Podsumowanie w języku dokumentu.</p>
-                      </div>
-                    </div>
-                    <div>
-                      <span>
-                        <FolderOpen size={19} />
-                      </span>
-                      <div>
-                        <strong>Porządek w informacjach</strong>
-                        <p>Daty, kwoty i podmioty w jednym miejscu.</p>
-                      </div>
-                    </div>
-                    <div>
-                      <span>
-                        <ShieldCheck size={19} />
-                      </span>
-                      <div>
-                        <strong>Sprawdzona struktura</strong>
-                        <p>Każdy wynik przechodzi walidację JSON.</p>
-                      </div>
-                    </div>
                   </div>
                 )}
                 {record && <Results key={record.id} record={record} sourceText={document?.text} />}
               </>
             )}
             <footer>
-              <span>
-                PDF Insight <span className="footer-divider">/</span> Z dokumentów do decyzji.
-              </span>
+              <span>PDF Insight</span>
               <button onClick={() => dialog.current?.showModal()}>
-                <CircleHelp size={14} /> Jak działa analiza?
+                <CircleHelp size={16} /> Pomoc i prywatność
               </button>
             </footer>
           </main>
@@ -719,74 +596,44 @@ export default function App() {
       >
         <div className="dialog-heading">
           <span className="small-icon">
-            <Cpu size={22} />
+            <CircleHelp size={22} />
           </span>
           <button
             className="icon-button"
-            aria-label="Zamknij ustawienia"
+            aria-label="Zamknij pomoc"
             onClick={() => dialog.current?.close()}
           >
             <X size={20} />
           </button>
         </div>
-        <h2>
-          {health
-            ? local
-              ? 'AI na Twoim komputerze.'
-              : 'AI przez bezpieczny backend.'
-            : 'Połączenie z AI.'}
-        </h2>
+        <h2>Pomoc i prywatność</h2>
         <p>
           {!health
-            ? 'Sprawdź połączenie z backendem, aby potwierdzić model i sposób przetwarzania dokumentów.'
+            ? 'Sprawdź połączenie, aby rozpocząć analizę.'
             : local
-              ? 'Ta wersja korzysta z lokalnego modelu przez Ollama. Nie wymaga klucza API ani płatnego konta.'
-              : 'Tekst dokumentu i obrazy skanów trafiają do Google Gemini API przez backend. Klucz API pozostaje na serwerze. Historia wyników jest zapisywana wyłącznie w tej przeglądarce.'}
+              ? 'Analiza odbywa się na tym komputerze. Dokument nie trafia do chmury.'
+              : 'Tekst i obrazy skanów trafiają do Google Gemini do analizy. Nie dodawaj danych poufnych do wersji demonstracyjnej.'}
         </p>
         <dl>
           <div>
-            <dt>Tekst w PDF</dt>
-            <dd>PDF.js — odczyt warstwy tekstowej</dd>
+            <dt>Dokument</dt>
+            <dd>PDF do 10 MB i 200 stron</dd>
           </div>
           <div>
-            <dt>Skany i podsumowanie</dt>
-            <dd>
-              {health
-                ? local
-                  ? 'Model wizyjny przez Ollama'
-                  : 'Model wizyjny przez Gemini API'
-                : 'Niepotwierdzone'}
-            </dd>
+            <dt>Skany</dt>
+            <dd>Odczyt do 8 stron ze skanem</dd>
           </div>
           <div>
-            <dt>Model</dt>
-            <dd>{health?.model || '—'}</dd>
+            <dt>Historia</dt>
+            <dd>5 ostatnich wyników, tylko w tej przeglądarce</dd>
           </div>
           <div>
-            <dt>Status</dt>
-            <dd>{health?.message || healthError || 'Sprawdzam…'}</dd>
-          </div>
-          <div>
-            <dt>Przetwarzanie</dt>
-            <dd>
-              {health
-                ? local
-                  ? 'Wyłącznie na tym komputerze'
-                  : 'Google Gemini API'
-                : 'Niepotwierdzone'}
-            </dd>
+            <dt>Połączenie</dt>
+            <dd>{health?.available ? 'Gotowe do analizy' : 'Usługa niedostępna'}</dd>
           </div>
         </dl>
-        <div className="notice info">
-          <Clock3 size={18} />
-          <span>
-            Czas zależy od długości dokumentu, liczby skanów i dostępności modelu. Długie dokumenty
-            są analizowane fragmentami.
-          </span>
-        </div>
         <p className="settings-detail">
-          Obsługiwane są pliki do 10 MB, maksymalnie 200 stron i 600 000 znaków. OCR obejmuje do 8
-          stron bez warstwy tekstowej. Historia zawiera ostatnie 5 wyników; możesz ją wyczyścić.
+          Długie dokumenty i skany mogą wymagać więcej czasu. Ważne informacje sprawdź w oryginale.
         </p>
         <button className="button primary" onClick={() => void refreshHealth()}>
           Sprawdź połączenie
