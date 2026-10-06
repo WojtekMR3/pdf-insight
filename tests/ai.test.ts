@@ -51,6 +51,55 @@ it('treats Ollama output truncation as a retryable invalid response', async () =
   ).rejects.toBeInstanceOf(InvalidModelReply);
 });
 
+const geminiEnv = {
+  AI_PROVIDER: 'gemini',
+  GEMINI_MODEL: 'gemini-test',
+  GEMINI_API_KEY: 'test-secret',
+  AI_RETRY_DELAY_MS: '0',
+};
+const geminiReply = () =>
+  new Response(
+    JSON.stringify({
+      candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{}' }] } }],
+    }),
+  );
+
+it('retries one transient provider failure, then reports it in Polish', async () => {
+  const signal = new AbortController().signal;
+  const recovering = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(new Response('overloaded', { status: 503 }))
+    .mockImplementation(async () => geminiReply());
+  expect(await createProvider(geminiEnv, recovering).chat([], {}, signal, 10)).toBe('{}');
+  expect(recovering).toHaveBeenCalledTimes(2);
+
+  const failing = vi
+    .fn<typeof fetch>()
+    .mockImplementation(async () => new Response('overloaded', { status: 503 }));
+  await expect(createProvider(geminiEnv, failing).chat([], {}, signal, 10)).rejects.toThrow(
+    'chwilowo niedostępna',
+  );
+  expect(failing).toHaveBeenCalledTimes(2);
+
+  const rejected = vi
+    .fn<typeof fetch>()
+    .mockImplementation(async () => new Response('bad', { status: 400 }));
+  await expect(createProvider(geminiEnv, rejected).chat([], {}, signal, 10)).rejects.toThrow(
+    'Usługa AI odrzuciła żądanie',
+  );
+  expect(rejected).toHaveBeenCalledTimes(1);
+});
+
+it('caps hosted model requests per analysis below the Workers subrequest limit', async () => {
+  const transport = vi.fn<typeof fetch>().mockImplementation(async () => geminiReply());
+  const provider = createProvider(geminiEnv, transport);
+  const signal = new AbortController().signal;
+  for (let call = 0; call < 40; call++) await provider.chat([], {}, signal, 10);
+  await expect(provider.chat([], {}, signal, 10)).rejects.toThrow('zbyt wielu');
+  expect(transport).toHaveBeenCalledTimes(40);
+  expect(provider.chunkChars).toBeGreaterThan(createProvider({}).chunkChars ?? 0);
+});
+
 it('blocks cloud Ollama addresses and missing Gemini configuration', () => {
   expect(() => createProvider({ OLLAMA_URL: 'https://example.com' })).toThrow('Tryb lokalny');
   expect(() => createProvider({ OLLAMA_MODEL: 'model:cloud' })).toThrow('Tryb lokalny');

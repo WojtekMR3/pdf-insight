@@ -2,7 +2,7 @@
 
 ## Tools used
 
-Codex assisted with reading the brief, planning, implementation, dependency setup, testing, browser checks and deployment. The application uses the existing Ollama installation and `qwen3.5:9b` locally. The public demo uses Gemini 3.1 Flash-Lite through a Cloudflare Worker. Provider behavior has unit coverage and live text-invoice/OCR checks. Runtime prompts are in `server/analysis.ts`.
+Codex assisted with reading the brief, planning, implementation, dependency setup, testing, browser checks and deployment. Claude Code then reviewed the deployed code and the live demo, and implemented the follow-up fixes described at the end of this log. The application uses the existing Ollama installation and `qwen3.5:9b` locally. The public demo uses Gemini 3.1 Flash-Lite through a Cloudflare Worker. Provider behavior has unit coverage and live text-invoice/OCR checks. Runtime prompts are in `server/analysis.ts`.
 
 ## Five key prompts and decisions
 
@@ -29,8 +29,25 @@ Codex assisted with reading the brief, planning, implementation, dependency setu
 
 - The user found the interface too dense and its text too small. The follow-up simplifies upload, results and help copy, removes repeated feature descriptions and model badges, and increases body text to 16 px with most secondary labels at 14 px. The required cloud-processing disclosure, error states, evidence references and JSON contract remain intact.
 
+## Follow-up review of the deployed demo
+
+- Prompt: "Review the codebase and the live demo against the brief, then fix what you find without breaking the public demo." The live contract summary contained a running page header and fragments such as "2 Umowy, który…", because sentence segmentation ended sentences after `ul.` and `ust.` and joined repeated headers to the first sentence. Sentence selection now ignores lines repeated on most pages, keeps sentences whole across common abbreviations and starts new sentences at clause numbers. A fallback keeps the previous behaviour when fewer than three sentences would remain.
+- The injected instruction and its "1 PLN" amount were still offered to the model; only the prompt prevented their use. A model reply selecting them passed every check in a mocked test. Instruction-like sentences are now removed in code from both catalogs, and evidence excerpts stop before them.
+- A mocked 200-page dense document needed 76 AI requests, because the second reduction pass re-read the whole document in 12,000-character chunks. It now reduces the already selected passages, Gemini uses larger chunks, and the hosted provider stops after 40 requests.
+- OCR quota and timeout errors were hidden as unreadable pages, and code errors were retried as invalid AI replies. Both now stop with an accurate message. Temporary 5xx responses receive one transport retry and a Polish message instead of "check backend configuration".
+- Two heuristics matched the supplied test document literally (its footer format and its "Podsumowanie finansowe" heading). Generic rules replaced them: lines repeated across pages, and a penalty for excerpts listing many amounts.
+- The review deliberately left the frontend unchanged. Any frontend change renames the lazily loaded PDF chunk, which would break tabs opened before the deployment. Known UI follow-ups: a retry button for the initial connection check, the sidebar "Nowa analiza" button while a result is shown, drops outside the drop zone, and per-record history validation.
+
 ## Human review
 
 The follow-up hosting request selected GitHub Pages, Cloudflare Workers and Gemini. The deployment workflow runs checks before publishing, passes the backend URL into the frontend build, keeps credentials in secrets and provides an optional real inference check using a synthetic invoice. The user chose to keep the supplied interview PDF private, so the public sample button loads a fictional invoice and private inputs stay local. Live text-invoice analysis, scanned-invoice OCR and JSON export passed. An initial repeated CORS probe returned an unexpected status; all Worker responses now vary by origin, probes bypass caches, and the subsequent manual deployment passed both CORS checks and real inference. Billing remains disabled.
 
 The candidate should be able to trace a PDF from upload through text extraction, OCR, chunking, evidence selection, validation, streaming and export. They should explain cancellation, local history, secret handling and the differences between the Node and worker entry points. Automated checks cannot establish that someone understands every line of code or that every AI-written claim is correct.
+
+## Follow-up fixes from the PR review
+
+- User request: fix the three regressions identified in PR #1. Synthetic checks against the previous implementation demonstrated silent loss of a legitimate USD 5,000 obligation and its deadline, a long user-count amendment, and one of two distinct events sharing a date.
+- Narrowed instruction detection to direct command forms with an AI address, output-location context, or instruction override/concealment. Ordinary obligations to write instructions or a summary report now remain in both catalogs. Existing Polish and English injection examples are still excluded. This remains a heuristic, not a guarantee against all prompt injection.
+- Removed the new 500-character readability cutoff. Complete source sentences retain the existing 1,200-character bound, and a long amendment remains available for mandatory summary and key-point inclusion.
+- Removed calendar-date-only deduplication. Repeated selections of one evidence ID are collapsed, while different events retain separate date contexts and page references.
+- Added thirteen regression cases, including complete extraction with mocked catalog-ID selections. Five failed before the fixes. The corrected suite contains 87 passing tests; strict types, lint, formatting, frontend and Worker builds also pass locally. Hosted verification remains pending until the PR is deployed.

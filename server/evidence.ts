@@ -3,6 +3,7 @@ import { resultSchema, type AnalysisRequest } from '../shared/schema.ts';
 import { CURRENCY_CODES } from '../shared/iso-codes.ts';
 import { explicitDates } from './grounding.ts';
 import { proseSelectionSchema, type ProsePassage } from './prose.ts';
+import { directiveSpans, isPageFooter, repeatedLines } from './sentences.ts';
 
 type Source = { page: number; quote: string };
 export type EvidenceCatalog = {
@@ -67,24 +68,49 @@ function currencyNear(before: string, after: string, text: string): string | und
   return undefined;
 }
 
+// Summary lines listing many amounts make weaker evidence than the clause stating one.
+const moneyMention = /\d[\d .,\u00a0]*\s?(?:zł|PLN|EUR|USD|GBP|CHF|€|\$|£)(?!\p{L})/giu;
+
 /** Source-first facts: the model chooses IDs rather than retyping numbers or years. */
-export function buildEvidence(pages: AnalysisRequest['pages']): EvidenceCatalog {
+export function buildEvidence(
+  pages: AnalysisRequest['pages'],
+  repeated = repeatedLines(pages),
+): EvidenceCatalog {
   const catalog: EvidenceCatalog = { amounts: [], dates: [] };
   const seen = new Set<string>();
   const amountScores = new Map<string, number>();
   for (const page of pages) {
+    const instructions = directiveSpans(page.text);
+    // Page-numbered running footers/headers and embedded AI instructions are not document
+    // facts. Other repeated lines stay: an invoice may print its total on every page.
+    const skipped = [...instructions];
+    if (repeated.size) {
+      let offset = 0;
+      for (const line of page.text.split('\n')) {
+        if (isPageFooter(line, repeated))
+          skipped.push({ start: offset, end: offset + line.length });
+        offset += line.length + 1;
+      }
+    }
+    const ignored = (index: number) =>
+      skipped.some(({ start, end }) => index >= start && index < end);
+    // Excerpts stop at embedded instructions, so their text never reaches the model or result.
+    const bounded = (index: number) => {
+      if (!instructions.length) return { text: page.text, offset: 0 };
+      let from = 0;
+      let to = page.text.length;
+      for (const { start, end } of instructions) {
+        if (end <= index) from = Math.max(from, end);
+        else if (start > index) to = Math.min(to, start);
+      }
+      return { text: page.text.slice(from, to), offset: from };
+    };
     for (const match of page.text.matchAll(datePattern)) {
-      const lineStart = page.text.lastIndexOf('\n', match.index) + 1;
-      const lineEnd = page.text.indexOf('\n', match.index);
-      if (
-        /^Wersja\b.*Strona\s+\d+/i.test(
-          page.text.slice(lineStart, lineEnd < 0 ? undefined : lineEnd),
-        )
-      )
-        continue;
+      if (ignored(match.index)) continue;
+      const { text, offset } = bounded(match.index);
       for (const date of explicitDates(match[0])) {
         if (!z.iso.date().safeParse(date).success) continue;
-        const quote = excerpt(page.text, match.index, match.index + match[0].length);
+        const quote = excerpt(text, match.index - offset, match.index + match[0].length - offset);
         const key = `d:${page.number}:${date}:${quote}`;
         if (!seen.has(key)) {
           seen.add(key);
@@ -100,18 +126,19 @@ export function buildEvidence(pages: AnalysisRequest['pages']): EvidenceCatalog 
       const end = match.index + match[0].length;
       // A total row can contain a percentage next to money. It must not inherit
       // the currency from the payable total.
-      if (/^\s*%/.test(page.text.slice(end))) continue;
+      if (/^\s*%/.test(page.text.slice(end)) || ignored(match.index)) continue;
       let currency = currencyNear(
         page.text.slice(Math.max(0, match.index - 12), match.index),
         page.text.slice(end, end + 12),
         page.text,
       );
-      let quote = excerpt(page.text, match.index, end);
-      const lineStart = page.text.lastIndexOf('\n', match.index) + 1;
+      const { text, offset } = bounded(match.index);
+      let quote = excerpt(text, match.index - offset, end - offset);
+      const lineStart = Math.max(offset, page.text.lastIndexOf('\n', match.index) + 1);
       const lineEnd = page.text.indexOf('\n', end);
       const line = page.text.slice(lineStart, lineEnd < 0 ? undefined : lineEnd);
       if (!currency && /^\s*(?:razem|total)\b/i.test(line)) {
-        let nearbyEnd = Math.min(page.text.length, (lineEnd < 0 ? end : lineEnd) + 100);
+        let nearbyEnd = Math.min(offset + text.length, (lineEnd < 0 ? end : lineEnd) + 100);
         if (nearbyEnd < page.text.length && !/\s/u.test(page.text[nearbyEnd])) {
           while (nearbyEnd > end && !/\s/u.test(page.text[nearbyEnd - 1])) nearbyEnd--;
         }
@@ -132,7 +159,7 @@ export function buildEvidence(pages: AnalysisRequest['pages']): EvidenceCatalog 
       const score =
         (isAmendmentPage(page.text) ? 100 : 0) +
         (/netto|brutto|abonament|wynagrodzeni|fee|price|cost/iu.test(quote) ? 10 : 0) -
-        (/Podsumowanie finansowe/iu.test(quote) ? 20 : 0);
+        Math.max(0, (quote.match(moneyMention) || []).length - 2) * 5;
       const existing = catalog.amounts.find(
         (entry) => entry.currency === currency && entry.value === value,
       );
@@ -197,20 +224,29 @@ export function extractionSchema(catalog: EvidenceCatalog, passages: ProsePassag
     });
 }
 
+// Context is for reading; source.quote keeps the exact line breaks used by grounding.
+const readable = (text: string) => text.replace(/\s+/g, ' ').trim();
+
 export function resolveEvidence(catalog: EvidenceCatalog, amounts: string[], dates: string[]) {
+  const selectedDates = [...new Set(dates)].map(
+    (id) => catalog.dates.find((item) => item.id === id)!,
+  );
   return {
     amounts: [...new Set(amounts)].map((id) => {
       const entry = catalog.amounts.find((item) => item.id === id)!;
       return {
         value: entry.value,
         currency: entry.currency,
-        context: entry.source.quote,
+        context: readable(entry.source.quote),
         source: entry.source,
       };
     }),
-    dates: [...new Set(dates)].map((id) => {
-      const entry = catalog.dates.find((item) => item.id === id)!;
-      return { date: entry.date, context: entry.source.quote, source: entry.source };
-    }),
+    // Different events can share a date. Only duplicate selections of the same ID
+    // are removed above; preserve each event's context and source reference.
+    dates: selectedDates.map((entry) => ({
+      date: entry.date,
+      context: readable(entry.source.quote),
+      source: entry.source,
+    })),
   };
 }
