@@ -49,7 +49,7 @@ export default function Results({
           <span className="eyebrow">
             <CheckCheck size={15} /> ANALIZA ZAKOŃCZONA
           </span>
-          <h2>Wszystko, co ważne.</h2>
+          <h2>Wynik analizy</h2>
           <p>{result.document.title || result.document.fileName}</p>
         </div>
         <button className="button primary" onClick={() => downloadResult(record)}>
@@ -66,9 +66,6 @@ export default function Results({
         <span>
           <CalendarDays size={15} />
           {result.document.date || 'Brak daty'}
-        </span>
-        <span className="validated">
-          <Check size={14} /> Poprawny schemat JSON
         </span>
       </div>
       {meta.warnings.map((warning) => (
@@ -111,9 +108,6 @@ export default function Results({
               </div>
               {result.proseSources ? (
                 <>
-                  <p className="prose-explanation">
-                    Wybrane zdania z dokumentu, bez dopisywania treści.
-                  </p>
                   {result.proseSources.summary.map((source, index) => (
                     <p key={index}>
                       {source.quote}{' '}
@@ -179,19 +173,7 @@ export default function Results({
                 ))}
               </div>
             </article>
-            <div className="model-footnote">
-              <span className="status-dot" /> {meta.model}
-              <br />
-              <span>
-                {meta.source === 'local-ai' ? 'Analiza lokalna' : 'Analiza przez API'} ·{' '}
-                {(meta.elapsedMs / 1000).toFixed(1)} s
-              </span>
-              <p>
-                {meta.proseMode === 'extractive'
-                  ? 'Cytaty zachowują brzmienie odczytanego tekstu. Sprawdź pełny kontekst i strony oznaczone OCR w oryginale.'
-                  : 'Sprawdź ważne informacje w oryginale. Model AI może popełniać błędy.'}
-              </p>
-            </div>
+            <p className="result-note">Ważne informacje sprawdź w oryginale.</p>
           </aside>
         </div>
       )}
@@ -281,8 +263,7 @@ export default function Results({
             <FileText size={17} /> Tekst wyodrębniony z PDF <ArrowUpRight size={16} />
           </div>
           <p className="muted">
-            Warstwa tekstowa dokumentu. Treść skanów odczytana przez AI jest uwzględniana w
-            analizie, ale nie w tym podglądzie.
+            Tekst z PDF. Odczytane skany są uwzględnione w analizie, ale nie w tym podglądzie.
           </p>
           <pre>{sourceText}</pre>
         </article>
