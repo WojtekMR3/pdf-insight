@@ -627,7 +627,7 @@ export default function App() {
                         </span>
                         <div>
                           <strong>Dodaj dokument</strong>
-                          <p>Wybierz PDF ze swojego komputera lub użyj przykładowej umowy.</p>
+                          <p>Wybierz PDF ze swojego komputera lub użyj przykładowej faktury.</p>
                         </div>
                       </div>
                       <div className="how-step">
