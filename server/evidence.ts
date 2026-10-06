@@ -241,15 +241,12 @@ export function resolveEvidence(catalog: EvidenceCatalog, amounts: string[], dat
         source: entry.source,
       };
     }),
-    // The same date can appear in several places; report it once, with its first context.
-    dates: selectedDates
-      .filter(
-        (entry, index) => selectedDates.findIndex(({ date }) => date === entry.date) === index,
-      )
-      .map((entry) => ({
-        date: entry.date,
-        context: readable(entry.source.quote),
-        source: entry.source,
-      })),
+    // Different events can share a date. Only duplicate selections of the same ID
+    // are removed above; preserve each event's context and source reference.
+    dates: selectedDates.map((entry) => ({
+      date: entry.date,
+      context: readable(entry.source.quote),
+      source: entry.source,
+    })),
   };
 }
