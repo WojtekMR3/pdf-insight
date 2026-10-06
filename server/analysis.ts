@@ -218,7 +218,16 @@ export async function analyzeDocument(
   // passages again, rather than letting the model discard part of an oversized prompt
   // or re-reading the whole document in many small requests.
   if (JSON.stringify(proseCatalog).length + JSON.stringify(catalog).length > 60000) {
-    condensed = await condense(condensed.pages, provider, signal, progress, 12000);
+    // About three parts (plus room for chunk overlap): enough to reduce the selection,
+    // without many small requests.
+    const selectedChars = condensed.pages.reduce((sum, page) => sum + page.text.length, 0);
+    condensed = await condense(
+      condensed.pages,
+      provider,
+      signal,
+      progress,
+      Math.max(15000, Math.ceil(selectedChars / 3) + 1000),
+    );
     catalog = buildEvidence(condensed.pages, repeated);
     proseCatalog = buildProseCatalog(pages, condensed.pages, repeated);
     if (JSON.stringify(proseCatalog).length + JSON.stringify(catalog).length > 60000)

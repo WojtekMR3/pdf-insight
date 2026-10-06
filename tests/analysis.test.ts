@@ -238,6 +238,18 @@ describe('Long documents', () => {
     expect(chat.mock.calls.length).toBeLessThanOrEqual(20);
   });
 
+  it('reduces a dense document that fits one chunk in about three requests', async () => {
+    const chat = verbatimModel();
+    const pages = numericPages(24);
+    await analyzeDocument(
+      { fileName: 'mid.pdf', fileSize: 1000, pageCount: pages.length, pages },
+      signal(),
+      () => {},
+      { ...provider(chat), chunkChars: 100_000 },
+    );
+    expect(chat.mock.calls.length).toBeLessThanOrEqual(4);
+  });
+
   it('sends fewer chunks to a provider with a larger context window', async () => {
     const chat = verbatimModel();
     const pages = numericPages(60);
