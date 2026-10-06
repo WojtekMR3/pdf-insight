@@ -58,6 +58,10 @@ export function repeatedLines(pages: { text: string }[]): Set<string> {
 export const isRepeatedLine = (line: string, repeated: Set<string>) =>
   repeated.size > 0 && repeated.has(lineKey(line));
 
+/** A repeated line with a page number, e.g. "Wersja 1.3 · 12.03.2026 Strona 2 z 12". */
+export const isPageFooter = (line: string, repeated: Set<string>) =>
+  pageMarker.test(line) && isRepeatedLine(line, repeated);
+
 // Embedded prompt injection: an imperative aimed at an AI, a summary or its instructions.
 const word = (pattern: string) =>
   new RegExp(`(?<![\\p{L}\\p{N}])(?:${pattern})(?![\\p{L}\\p{N}])`, 'iu');

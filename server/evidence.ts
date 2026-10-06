@@ -3,7 +3,7 @@ import { resultSchema, type AnalysisRequest } from '../shared/schema.ts';
 import { CURRENCY_CODES } from '../shared/iso-codes.ts';
 import { explicitDates } from './grounding.ts';
 import { proseSelectionSchema, type ProsePassage } from './prose.ts';
-import { directiveSpans, isRepeatedLine, repeatedLines } from './sentences.ts';
+import { directiveSpans, isPageFooter, repeatedLines } from './sentences.ts';
 
 type Source = { page: number; quote: string };
 export type EvidenceCatalog = {
@@ -81,12 +81,13 @@ export function buildEvidence(
   const amountScores = new Map<string, number>();
   for (const page of pages) {
     const instructions = directiveSpans(page.text);
-    // Running headers/footers and embedded AI instructions are not document facts.
+    // Page-numbered running footers/headers and embedded AI instructions are not document
+    // facts. Other repeated lines stay: an invoice may print its total on every page.
     const skipped = [...instructions];
     if (repeated.size) {
       let offset = 0;
       for (const line of page.text.split('\n')) {
-        if (isRepeatedLine(line, repeated))
+        if (isPageFooter(line, repeated))
           skipped.push({ start: offset, end: offset + line.length });
         offset += line.length + 1;
       }

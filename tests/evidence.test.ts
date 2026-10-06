@@ -86,6 +86,16 @@ describe('Deterministic numeric evidence', () => {
     ]);
   });
 
+  it('keeps amounts and dates repeated on every page without a page number', () => {
+    const pages = [1, 2, 3].map((number) => ({
+      number,
+      text: `Pozycje faktury, część ${number}.\nDo zapłaty: 1 234,00 zł do 15.10.2026 r.`,
+    }));
+    const catalog = buildEvidence(pages);
+    expect(catalog.amounts.map(({ value }) => value)).toEqual([1234]);
+    expect(catalog.dates.map(({ date }) => date)).toContain('2026-10-15');
+  });
+
   it('prefers a clause over a summary line listing many amounts', () => {
     const catalog = buildEvidence([
       {

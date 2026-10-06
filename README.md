@@ -87,7 +87,7 @@ See [the code walkthrough](docs/architecture.md) for file responsibilities and d
 npm run check
 ```
 
-Runs strict TypeScript, ESLint, Prettier, 73 Vitest tests, the frontend production build, and the optional worker bundle. Test coverage includes schema rejection, numeric/source checks, extractive prose, readable sentence selection, embedded-instruction removal, amendment retention, chunk coverage and request limits, retry behavior, stream completion/cancellation, unavailable browser storage, mocked provider transport, and hosted handler protections.
+Runs strict TypeScript, ESLint, Prettier, 74 Vitest tests, the frontend production build, and the optional worker bundle. Test coverage includes schema rejection, numeric/source checks, extractive prose, readable sentence selection, embedded-instruction removal, amendment retention, chunk coverage and request limits, retry behavior, stream completion/cancellation, unavailable browser storage, mocked provider transport, and hosted handler protections.
 
 On this PC with an RTX 5080 and `qwen3.5:9b`, the supplied contract completed in approximately **16 seconds warm** and **22 seconds including a cold model load**, including OCR of page 11. These are individual local measurements, not an all-document or hosted performance guarantee. An uploaded English invoice completed in 3 seconds. See [verification and remaining submission requirements](docs/verification.md) for scope and reproducible commands.
 
