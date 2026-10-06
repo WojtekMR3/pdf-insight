@@ -4,7 +4,9 @@ PDF Insight turns a PDF into a short summary and validated JSON. It supports tex
 
 ![PDF Insight with its full-height sidebar](docs/preview-sidebar.jpg)
 
-**Local app:** http://localhost:4173. **Public demo:** deployment preparation is in progress. The GitHub Actions workflow, hosted backend configuration and cloud verification command are prepared; no public deployment or live Gemini result has been verified yet.
+**[Open the public demo](https://wojtekmr3.github.io/pdf-insight/)** · **[Source code](https://github.com/WojtekMR3/pdf-insight)** · **[Deployment checks](https://github.com/WojtekMR3/pdf-insight/actions/workflows/deploy.yml)**
+
+The public demo uses GitHub Pages, a Cloudflare Worker and Gemini 3.1 Flash-Lite. Live invoice analysis, scanned-page OCR and JSON export were verified on 2026-10-06. Local Ollama mode remains available at http://localhost:4173.
 
 ## Run on this PC
 
@@ -85,10 +87,10 @@ Runs strict TypeScript, ESLint, Prettier, 55 Vitest tests, the frontend producti
 
 On this PC with an RTX 5080 and `qwen3.5:9b`, the supplied contract completed in approximately **16 seconds warm** and **22 seconds including a cold model load**, including OCR of page 11. These are individual local measurements, not an all-document or hosted performance guarantee. An uploaded English invoice completed in 3 seconds. See [verification and remaining submission requirements](docs/verification.md) for scope and reproducible commands.
 
-## Public deployment and remaining submission work
+## Public deployment
 
-The selected deployment is GitHub Pages plus a Cloudflare Worker and Gemini API. `.github/workflows/deploy.yml` checks the project, deploys the backend, verifies its configuration and CORS, and publishes the frontend with the deployed backend URL. Deployment remains disabled until the repository variables and secrets described in [hosting setup](docs/hosting.md) are configured. A manual run can also analyze the synthetic invoice and verify its amount, dates, schema and latency. The original contract benchmark requires the private local PDF and fixtures, which are not included in the public repository.
+`.github/workflows/deploy.yml` checks the project, deploys the backend, verifies its configuration and CORS, and publishes the frontend with the deployed backend URL. Repository secrets and variables are configured as described in [hosting setup](docs/hosting.md). A manual run can also analyze the synthetic invoice and verify its amount, dates, schema and latency. `npm run benchmark` uses synthetic data with local Ollama; private interview inputs and their benchmark stay outside the public repository.
 
-The public repository, Conventional Commits, account setup and actual deployment remain outstanding. The public end-to-end under-30-second target, external-device access and 14-day availability remain unverified. The brief's 24-hour deadline depends on when the candidate received it; this setup does not establish submission compliance.
+The hosted invoice smoke test completed in **3.271 seconds**. Browser results reported **3.346 seconds** for the text invoice and **6.256 seconds** for a fictional scanned invoice, with correct amounts, dates and OCR attribution. These backend measurements exclude browser extraction and file-selection time. Downloaded JSON matched the visible preview exactly. External-device access, maximum-workload performance and 14-day availability still need observation; a successful deployment cannot prove future uptime.
 
 [AI_LOG.md](AI_LOG.md) records five key prompts, mistakes and corrections. The candidate must understand and be able to explain the implementation before submission.
