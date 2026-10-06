@@ -26,7 +26,13 @@ Successful native dragging from Explorer remains a manual check: the automation 
 
 The deployment workflow checks the project, deploys the Worker and its secret, verifies configuration readiness and CORS, and then publishes GitHub Pages. A manual run with `verify_sample` enabled also analyzes the fictional invoice through Gemini and validates the resulting schema, amount, dates and backend round-trip time.
 
-Live inference, browser end-to-end timing and public deployment are pending. The selected free-tier model is `gemini-3.1-flash-lite`; the project's dashboard currently reports 15 requests per minute, 250,000 input tokens per minute and 500 requests per day. Long documents, OCR and correction attempts can consume multiple requests. Quotas can change.
+[Manual deployment run 6](https://github.com/WojtekMR3/pdf-insight/actions/runs/37459751011) passed the clean build, both API/CORS checks, real Gemini inference and Pages deployment. The hosted invoice smoke test took **3.271 seconds** and verified USD 1,250.50 and its payment deadline.
+
+The [public demo](https://wojtekmr3.github.io/pdf-insight/) was then tested in Chrome. The text invoice completed in **3.346 seconds of backend time**. Downloaded JSON matched the visible JSON preview exactly. A newly created image-only fictional invoice exercised browser scan detection, Gemini OCR and final extraction; it completed in **6.256 seconds**, correctly reporting USD 2,450.75, issue date 2026-10-02, payment deadline 2026-10-16, `ocrPages: [1]`, no unread pages and no warnings. Both results remained in local history after reloading. These timers exclude browser PDF extraction and file-selection time.
+
+An earlier manual run detected an inconsistent repeat response for an unrelated origin. Worker responses now always include `Vary: Origin`, including rejections, and verification requests bypass caches and report response diagnostics. The subsequent manual run passed both origin checks. The exact cause of the initial inconsistent response was not established.
+
+The selected free-tier model is `gemini-3.1-flash-lite`; the project's dashboard currently reports 15 requests per minute, 250,000 input tokens per minute and 500 requests per day. Long documents, OCR and correction attempts can consume multiple requests. Quotas can change.
 
 ## Remaining limits
 

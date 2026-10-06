@@ -1,10 +1,10 @@
 # Hosted deployment
 
-The selected architecture is GitHub Pages for the frontend, a Cloudflare Worker for the backend, and Gemini API for inference. Deployment is authorized by the user, but external account creation/configuration and live verification are still pending. The public repository is being prepared under `WojtekMR3/pdf-insight`, with Worker name `pdf-insight-api` and a dedicated Google project/key named `PDF Insight`. No paid plan is required by this configuration.
+The deployed architecture is [GitHub Pages](https://wojtekmr3.github.io/pdf-insight/) for the frontend, Cloudflare Worker `pdf-insight-api` for the backend, and Gemini 3.1 Flash-Lite for inference. Source is public at [WojtekMR3/pdf-insight](https://github.com/WojtekMR3/pdf-insight). A dedicated Google project/key named `PDF Insight` supplies the backend credential. Billing remains disabled. Text-invoice analysis, scanned-invoice OCR and JSON export passed on 2026-10-06; see [verification details](verification.md).
 
 ## GitHub Actions
 
-The prepared `.github/workflows/deploy.yml` runs all checks for pull requests and pushes to `main`. Publishing is enabled only for `main`, after checks pass, when `DEPLOY_ENABLED` is `true`. Pull requests never receive deployment secrets. Before enabling deployment:
+`.github/workflows/deploy.yml` runs all checks for pull requests and pushes to `main`. Publishing is enabled only for `main`, after checks pass, when `DEPLOY_ENABLED` is `true`. Deployment credentials are used only in the main-branch backend job. To reproduce the configured setup:
 
 1. Create the public repository and push the reviewed source. Select **GitHub Actions** under **Settings > Pages > Build and deployment > Source**.
 2. Create the Gemini project/key on the free tier and confirm an available vision model with structured JSON support. Keep billing disabled unless a paid plan is separately chosen.
@@ -14,13 +14,13 @@ The prepared `.github/workflows/deploy.yml` runs all checks for pull requests an
 
 The API URL comes directly from the Worker deployment output. The frontend uses `/<repository>/` as its Vite base path. The workflow is intended for a project repository such as `pdf-insight`, not a root `<owner>.github.io` site or a custom domain. Future pushes to `main` repeat deployment and lightweight API checks; the sample inference runs only when explicitly enabled in a manual workflow run.
 
-`npm run verify:cloud` needs `API_URL` and `FRONTEND_ORIGIN` in the environment. It checks cloud configuration readiness, browser preflight and rejection of unrelated origins. Add `-- --sample` to analyze the synthetic invoice through the real backend, validate its JSON, and check USD 1,250.50 and the payment deadline. This performs real inference and uses provider quota. It fails when backend round-trip time reaches 30 seconds; passing still does not establish end-to-end browser timing, which also includes PDF extraction. The hosted smoke test does not cover OCR. No cloud test has passed yet.
+`npm run verify:cloud` needs `API_URL` and `FRONTEND_ORIGIN` in the environment. It checks cloud configuration readiness, browser preflight and rejection of unrelated origins. Add `-- --sample` to analyze the synthetic invoice through the real backend, validate its JSON, and check USD 1,250.50 and the payment deadline. This performs real inference and uses provider quota. It fails when backend round-trip time reaches 30 seconds; passing still does not establish end-to-end browser timing, which also includes PDF extraction. The hosted smoke test passed in 3.271 seconds. OCR was verified separately in the public browser flow with an image-only fictional invoice.
 
 The supplied interview PDF and its text, image and metadata fixtures stay local. Only the synthetic invoice is bundled into the public frontend. Automated unit tests use synthetic data and do not require the private files.
 
 ## Available configurations
 
-Local Ollama remains the default and requires no API key. To exercise the cloud adapter from the Node backend, copy `.env.example` to `.env`, set `AI_PROVIDER=gemini`, set `GEMINI_MODEL` to a currently available Gemini model with vision and structured-output support, and set `GEMINI_API_KEY` locally. Never paste the key into chat or any `VITE_` variable. Restart the backend after changing configuration. No credential or live Gemini connection has been tested yet.
+Local Ollama remains the default and requires no API key. To exercise the cloud adapter from the Node backend, copy `.env.example` to `.env`, set `AI_PROVIDER=gemini`, set `GEMINI_MODEL` to an available Gemini model with vision and structured-output support, and set `GEMINI_API_KEY` locally. Never paste the key into chat or any `VITE_` variable. Restart the backend after changing configuration.
 
 The implementation uses Google's documented [Generate Content structured-output REST interface](https://ai.google.dev/gemini-api/docs/generate-content/structured-output). Model availability and free quotas change; choose the model from the account's current model list instead of relying on a permanently hardcoded name. Gemini health reports configuration readiness, not a successful inference or remaining quota.
 
